@@ -28,6 +28,9 @@ build/
 .coverage
 htmlcov/
 
+# Local plans from /plan (never committed)
+plans/
+
 # Generated maps (test fixtures under tests/ stay committed)
 backend/output/
 
