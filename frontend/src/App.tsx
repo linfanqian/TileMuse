@@ -16,23 +16,27 @@ import ViolationList from './features/violations/ViolationList'
 export default function App() {
   const [spec, setSpec] = useState<MapSpec | null>(null)
   const [map, setMap] = useState<GameMap | null>(null)
-  const [explanations, setExplanations] = useState<Explanation[]>([])
+  // null means the current map's results are unknown (validation failed).
+  const [explanations, setExplanations] = useState<Explanation[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const latestValidation = useRef(0)
+  // Bumped on every map change so responses for an older map are ignored.
+  const latestRequest = useRef(0)
 
   async function handleIdea(idea: string) {
     setBusy(true)
     setError(null)
+    const id = ++latestRequest.current
     try {
       const nextSpec = await getSpec(idea)
       const seed = Math.floor(Math.random() * 2 ** 31)
       const result = await generate(nextSpec, seed)
+      if (id !== latestRequest.current) return
       setSpec(nextSpec)
       setMap(result.map)
       setExplanations(result.explanations)
     } catch (e) {
-      setError(String(e))
+      if (id === latestRequest.current) setError(String(e))
     } finally {
       setBusy(false)
     }
@@ -41,12 +45,16 @@ export default function App() {
   async function handleEdit(next: GameMap) {
     if (!spec) return
     setMap(next)
-    const id = ++latestValidation.current
+    const id = ++latestRequest.current
     try {
       const result = await validate(spec, next)
-      if (id === latestValidation.current) setExplanations(result.explanations)
+      if (id !== latestRequest.current) return
+      setExplanations(result.explanations)
+      setError(null)
     } catch (e) {
-      setError(String(e))
+      if (id !== latestRequest.current) return
+      setExplanations(null)
+      setError(`Validation failed, issues are unknown: ${e}`)
     }
   }
 
@@ -78,7 +86,7 @@ export default function App() {
         <>
           <MapEditor map={map} onChange={handleEdit} />
           <button onClick={handleExport}>Export Tiled JSON</button>
-          <ViolationList explanations={explanations} />
+          {explanations && <ViolationList explanations={explanations} />}
         </>
       )}
     </main>
