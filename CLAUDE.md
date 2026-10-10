@@ -20,8 +20,8 @@ idea → **LLM** → spec → **Pydantic schema** → **deterministic generator*
 Frontend (run in `frontend/`):
 - `npm install` / `npm run dev`
 - `npm test` (Vitest). Prefer a single file: `npx vitest run path/to/file.test.ts`
-- `npm run lint` (ESLint) and `npx prettier --check .`
-- `npx tsc --noEmit` to typecheck
+- `npm run lint` (oxlint) and `npx prettier --check .`
+- `npm run typecheck` (`tsc -b`; plain `tsc --noEmit` checks nothing with the project references)
 
 Backend (run in `backend/`):
 - `uv sync` / `uv run fastapi dev` (serves on :8000)

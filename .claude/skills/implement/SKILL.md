@@ -28,7 +28,7 @@ If no plan path is given, list `plans/` and ask which plan to use. If there is n
    - Commit when the step is green, using a Conventional Commit message (`feat: ...`, `fix: ...`, `test: ...`).
 4. **Final checks.** Run the full check set for each side you touched:
    - Backend: `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest`
-   - Frontend: `npm run lint`, `npx prettier --check .`, `npx tsc --noEmit`, `npm test`
+   - Frontend: `npm run lint`, `npx prettier --check .`, `npm run typecheck`, `npm test`
    Fix any failures. Don't skip, disable, or weaken a test to make it pass.
 5. **Review.** Run the `review` skill on the branch and fix every 🔴 finding. Report 🟡 and 🟢 findings to the user. Don't fix those unasked.
 6. **Report.** Summarize what was done, how it was tested, and any deviations from the plan. Don't push or open a PR unless asked.
