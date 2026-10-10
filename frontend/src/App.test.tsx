@@ -74,3 +74,29 @@ test('a validation response for an older map does not overwrite a newer map', as
   screen.getByText('new map issue')
   expect(screen.queryByText('old map issue')).toBeNull()
 })
+
+test('editing the old map while a new one generates does not drop the new map', async () => {
+  vi.mocked(client.validate).mockResolvedValue({
+    violations: [],
+    explanations: [],
+  })
+  let resolveNew!: (r: client.GenerateResult) => void
+  vi.mocked(client.generate)
+    .mockResolvedValueOnce({ map, violations: [], explanations: [] })
+    .mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveNew = resolve
+      }),
+    )
+  render(<App />)
+  await submitIdea()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Generate' })) // generation now pending
+  await vi.waitFor(() => expect(client.generate).toHaveBeenCalledTimes(2))
+  fireEvent.click(screen.getAllByRole('gridcell')[0])
+
+  await act(async () =>
+    resolveNew({ map, violations: [], explanations: [issue('new map issue')] }),
+  )
+  screen.getByText('new map issue')
+})

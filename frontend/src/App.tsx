@@ -20,23 +20,26 @@ export default function App() {
   const [explanations, setExplanations] = useState<Explanation[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Bumped on every map change so responses for an older map are ignored.
-  const latestRequest = useRef(0)
+  // Request counters so late responses are ignored. Editing never cancels a pending
+  // generation; a newly generated map cancels pending validations of the old one.
+  const latestGenerate = useRef(0)
+  const latestMap = useRef(0)
 
   async function handleIdea(idea: string) {
     setBusy(true)
     setError(null)
-    const id = ++latestRequest.current
+    const id = ++latestGenerate.current
     try {
       const nextSpec = await getSpec(idea)
       const seed = Math.floor(Math.random() * 2 ** 31)
       const result = await generate(nextSpec, seed)
-      if (id !== latestRequest.current) return
+      if (id !== latestGenerate.current) return
+      latestMap.current++
       setSpec(nextSpec)
       setMap(result.map)
       setExplanations(result.explanations)
     } catch (e) {
-      if (id === latestRequest.current) setError(String(e))
+      if (id === latestGenerate.current) setError(String(e))
     } finally {
       setBusy(false)
     }
@@ -45,14 +48,14 @@ export default function App() {
   async function handleEdit(next: GameMap) {
     if (!spec) return
     setMap(next)
-    const id = ++latestRequest.current
+    const id = ++latestMap.current
     try {
       const result = await validate(spec, next)
-      if (id !== latestRequest.current) return
+      if (id !== latestMap.current) return
       setExplanations(result.explanations)
       setError(null)
     } catch (e) {
-      if (id !== latestRequest.current) return
+      if (id !== latestMap.current) return
       setExplanations(null)
       setError(`Validation failed, issues are unknown: ${e}`)
     }

@@ -5,7 +5,8 @@ from app.models import Explanation, Violation
 # Violation code -> str.format template filled from details plus x and y.
 TEMPLATES: dict[str, str] = {}
 
-# Used when a code has no template yet, so a violation is never dropped or crashes the request.
+# Used when a code has no template yet or its template can't be filled,
+# so a violation is never dropped or crashes the request.
 FALLBACK_TEMPLATE = "Rule '{code}' was violated."
 
 
@@ -15,6 +16,9 @@ def explain(violations: list[Violation]) -> list[Explanation]:
 
 def _render(v: Violation) -> str:
     template = TEMPLATES.get(v.code)
-    if template is None:
-        return FALLBACK_TEMPLATE.format(code=v.code)
-    return template.format(**{**v.details, "x": v.x, "y": v.y})
+    if template is not None:
+        try:
+            return template.format(**{**v.details, "x": v.x, "y": v.y})
+        except (KeyError, IndexError):
+            pass  # template uses a placeholder this violation doesn't provide
+    return FALLBACK_TEMPLATE.format(code=v.code)

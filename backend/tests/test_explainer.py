@@ -19,3 +19,10 @@ def test_details_with_x_or_y_keys_do_not_crash(monkeypatch):
     monkeypatch.setitem(explainer.TEMPLATES, "at", "At ({x}, {y}).")
     [out] = explain([Violation(code="at", x=3, y=4, details={"x": 9, "y": 9})])
     assert out.text == "At (3, 4)."
+
+
+def test_template_with_missing_placeholder_uses_fallback(monkeypatch):
+    monkeypatch.setitem(explainer.TEMPLATES, "needs_what", "Missing {what}.")
+    [out] = explain([Violation(code="needs_what")])
+    assert out.code == "needs_what"
+    assert out.text == FALLBACK_TEMPLATE.format(code="needs_what")
