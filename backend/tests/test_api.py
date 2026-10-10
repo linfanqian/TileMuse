@@ -36,3 +36,11 @@ def test_generate_then_validate_roundtrip():
     res = client.post("/api/export", json={"map": generated["map"]})
     assert res.status_code == 200
     assert res.json()["type"] == "map"
+
+
+def test_rejects_map_whose_tiles_do_not_match_its_size():
+    bad_map = {"width": 3, "height": 2, "tiles": [[0, 0, 0], [0, 0]]}
+    res = client.post("/api/export", json={"map": bad_map})
+    assert res.status_code == 422
+    res = client.post("/api/validate", json={"spec": MapSpec().model_dump(), "map": bad_map})
+    assert res.status_code == 422
