@@ -21,6 +21,19 @@ def test_same_seed_identical_map():
     assert len(doors) > 1
 
 
+def test_fixed_seed_golden_map():
+    # Golden output: catches changes across processes, machines and Python versions that
+    # comparing two runs in one process cannot. Update it only on an intended generator change.
+    game_map = generate(MapSpec(width=5, height=4), Random(42))
+    assert game_map.tiles == [
+        [1, 1, 1, 2, 1],
+        [1, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1],
+    ]
+    assert game_map.objects == []
+
+
 def test_map_matches_spec_size():
     spec = MapSpec(width=10, height=6)
     game_map = generate(spec, Random(0))

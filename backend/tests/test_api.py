@@ -25,13 +25,15 @@ def test_generate_requires_seed():
 
 def test_generate_then_validate_roundtrip():
     spec = MapSpec().model_dump()
-    generated = client.post("/api/generate", json={"spec": spec, "seed": 1}).json()
-    assert isinstance(generated["violations"], list)
-    assert isinstance(generated["explanations"], list)
+    res = client.post("/api/generate", json={"spec": spec, "seed": 1})
+    assert res.status_code == 200
+    generated = res.json()
+    assert generated["violations"] == []
+    assert generated["explanations"] == []
 
     res = client.post("/api/validate", json={"spec": spec, "map": generated["map"]})
     assert res.status_code == 200
-    assert isinstance(res.json()["violations"], list)
+    assert res.json()["violations"] == []
 
     res = client.post("/api/export", json={"map": generated["map"]})
     assert res.status_code == 200
