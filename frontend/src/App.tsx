@@ -19,7 +19,9 @@ export default function App() {
   // null means the current map's results are unknown (validation failed).
   const [explanations, setExplanations] = useState<Explanation[] | null>(null)
   const [busy, setBusy] = useState(false)
+  // Generation/export errors and validation errors are separate so clearing one never hides the other.
   const [error, setError] = useState<string | null>(null)
+  const [validationError, setValidationError] = useState<string | null>(null)
   // Request counters so late responses are ignored. Editing never cancels a pending
   // generation; a newly generated map cancels pending validations of the old one.
   const latestGenerate = useRef(0)
@@ -38,6 +40,7 @@ export default function App() {
       setSpec(nextSpec)
       setMap(result.map)
       setExplanations(result.explanations)
+      setValidationError(null)
     } catch (e) {
       if (id === latestGenerate.current) setError(String(e))
     } finally {
@@ -53,11 +56,11 @@ export default function App() {
       const result = await validate(spec, next)
       if (id !== latestMap.current) return
       setExplanations(result.explanations)
-      setError(null)
+      setValidationError(null)
     } catch (e) {
       if (id !== latestMap.current) return
       setExplanations(null)
-      setError(`Validation failed, issues are unknown: ${e}`)
+      setValidationError(`Validation failed, issues are unknown: ${e}`)
     }
   }
 
@@ -89,6 +92,7 @@ export default function App() {
         <>
           <MapEditor map={map} onChange={handleEdit} />
           <button onClick={handleExport}>Export Tiled JSON</button>
+          {validationError && <p role="alert">{validationError}</p>}
           {explanations && <ViolationList explanations={explanations} />}
         </>
       )}

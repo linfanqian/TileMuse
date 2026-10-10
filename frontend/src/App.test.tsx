@@ -100,3 +100,23 @@ test('editing the old map while a new one generates does not drop the new map', 
   )
   screen.getByText('new map issue')
 })
+
+test('a successful validation does not clear a generation error', async () => {
+  vi.mocked(client.validate).mockResolvedValue({
+    violations: [],
+    explanations: [],
+  })
+  vi.mocked(client.generate)
+    .mockResolvedValueOnce({ map, violations: [], explanations: [] })
+    .mockRejectedValueOnce(new Error('generate down'))
+  render(<App />)
+  await submitIdea()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  await screen.findByText(/generate down/)
+  fireEvent.click(screen.getAllByRole('gridcell')[0])
+
+  await vi.waitFor(() => expect(client.validate).toHaveBeenCalled())
+  await act(async () => {})
+  screen.getByText(/generate down/)
+})
