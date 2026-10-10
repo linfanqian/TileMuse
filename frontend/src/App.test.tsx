@@ -120,3 +120,16 @@ test('a successful validation does not clear a generation error', async () => {
   await act(async () => {})
   screen.getByText(/generate down/)
 })
+
+test('shows the seed the map was generated with', async () => {
+  vi.mocked(client.generate).mockResolvedValue({
+    map,
+    violations: [],
+    explanations: [],
+  })
+  render(<App />)
+  await submitIdea()
+
+  const seed = vi.mocked(client.generate).mock.calls[0][1]
+  screen.getByText(`Seed: ${seed}`)
+})

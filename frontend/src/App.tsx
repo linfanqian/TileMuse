@@ -16,6 +16,7 @@ import ViolationList from './features/violations/ViolationList'
 export default function App() {
   const [spec, setSpec] = useState<MapSpec | null>(null)
   const [map, setMap] = useState<GameMap | null>(null)
+  const [seed, setSeed] = useState<number | null>(null)
   // null means the current map's results are unknown (validation failed).
   const [explanations, setExplanations] = useState<Explanation[] | null>(null)
   const [busy, setBusy] = useState(false)
@@ -33,11 +34,13 @@ export default function App() {
     const id = ++latestGenerate.current
     try {
       const nextSpec = await getSpec(idea)
-      const seed = Math.floor(Math.random() * 2 ** 31)
-      const result = await generate(nextSpec, seed)
+      // Math.random only picks the seed; the backend generator is deterministic given it.
+      const nextSeed = Math.floor(Math.random() * 2 ** 31)
+      const result = await generate(nextSpec, nextSeed)
       if (id !== latestGenerate.current) return
       latestMap.current++
       setSpec(nextSpec)
+      setSeed(nextSeed)
       setMap(result.map)
       setExplanations(result.explanations)
       setValidationError(null)
@@ -79,8 +82,11 @@ export default function App() {
     const a = document.createElement('a')
     a.href = url
     a.download = 'map.tmj'
+    document.body.append(a)
     a.click()
-    URL.revokeObjectURL(url)
+    a.remove()
+    // Revoking in the same tick can cancel the download in some browsers.
+    setTimeout(() => URL.revokeObjectURL(url), 0)
   }
 
   return (
@@ -90,6 +96,7 @@ export default function App() {
       {error && <p role="alert">{error}</p>}
       {map && (
         <>
+          <p>Seed: {seed}</p>
           <MapEditor map={map} onChange={handleEdit} />
           <button onClick={handleExport}>Export Tiled JSON</button>
           {validationError && <p role="alert">{validationError}</p>}

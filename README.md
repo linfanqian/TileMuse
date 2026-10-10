@@ -3,7 +3,7 @@ An AI-assisted 2D map design tool that turns vague ideas into editable, validate
 
 ## Quickstart
 
-Requires [uv](https://docs.astral.sh/uv/) and Node.js 20+.
+Requires [uv](https://docs.astral.sh/uv/) and Node.js 22.12+ or 24+ (Vitest doesn't support Node 25).
 
 ```sh
 # Terminal 1: backend on :8000
