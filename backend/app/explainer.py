@@ -19,6 +19,6 @@ def _render(v: Violation) -> str:
     if template is not None:
         try:
             return template.format(**{**v.details, "x": v.x, "y": v.y})
-        except (KeyError, IndexError):
-            pass  # template uses a placeholder this violation doesn't provide
+        except (KeyError, IndexError, AttributeError, ValueError, TypeError):
+            pass  # placeholder missing or value can't be formatted
     return FALLBACK_TEMPLATE.format(code=v.code)

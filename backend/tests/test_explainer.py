@@ -26,3 +26,9 @@ def test_template_with_missing_placeholder_uses_fallback(monkeypatch):
     [out] = explain([Violation(code="needs_what")])
     assert out.code == "needs_what"
     assert out.text == FALLBACK_TEMPLATE.format(code="needs_what")
+
+
+def test_template_that_cannot_format_its_values_uses_fallback(monkeypatch):
+    monkeypatch.setitem(explainer.TEMPLATES, "typed", "At {x:d}.")
+    [out] = explain([Violation(code="typed")])  # x is None, so {x:d} raises TypeError
+    assert out.text == FALLBACK_TEMPLATE.format(code="typed")
