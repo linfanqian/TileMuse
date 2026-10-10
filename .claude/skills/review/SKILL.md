@@ -49,7 +49,7 @@ Look for `plans/<issue#>-*.md`, matching the issue number in the branch name or 
 
 **Plan conformance.** Requirements that are missing or only partly done, files changed outside the plan's Files Changed list, and behavior nobody asked for (scope creep). Quote the plan line for each finding.
 
-Skip formatting and lint issues that ruff, ESLint, and Prettier already enforce.
+Skip formatting and lint issues that ruff, oxlint, and Prettier already enforce.
 
 ## 4. Report
 
