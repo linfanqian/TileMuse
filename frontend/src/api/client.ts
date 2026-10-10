@@ -21,19 +21,6 @@ type Body<P extends PostPath> =
 type Result<P extends PostPath> =
   PostOp<P>['responses'][200]['content']['application/json']
 
-// FastAPI errors carry `detail`: a string, or a list of `{ msg }` for 422s.
-export function errorDetail(body: unknown): string | null {
-  const detail = (body as { detail?: unknown } | null)?.detail
-  if (typeof detail === 'string') return detail
-  if (Array.isArray(detail)) {
-    const msgs = detail
-      .map((d) => (d as { msg?: unknown })?.msg)
-      .filter((m): m is string => typeof m === 'string')
-    if (msgs.length) return msgs.join('; ')
-  }
-  return null
-}
-
 async function post<P extends PostPath>(
   path: P,
   body: Body<P>,
@@ -43,12 +30,8 @@ async function post<P extends PostPath>(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) {
-    const detail = errorDetail(await res.json().catch(() => null))
-    throw new Error(
-      `${path} failed: ${res.status}${detail ? ` (${detail})` : ''}`,
-    )
-  }
+  if (!res.ok)
+    throw new Error(`${path} failed: ${res.status} ${await res.text()}`)
   return res.json() as Promise<Result<P>>
 }
 

@@ -5,8 +5,6 @@ from typing import Any, Self
 
 from pydantic import BaseModel, Field, model_validator
 
-MAX_MAP_SIZE = 128  # same cap as MapSpec
-
 
 class Tile(IntEnum):
     FLOOR = 0
@@ -21,8 +19,8 @@ class MapObject(BaseModel):
 
 
 class GameMap(BaseModel):
-    width: int = Field(ge=1, le=MAX_MAP_SIZE)
-    height: int = Field(ge=1, le=MAX_MAP_SIZE)
+    width: int = Field(ge=1)
+    height: int = Field(ge=1)
     tiles: list[list[Tile]]  # tiles[y][x]
     objects: list[MapObject] = []
 

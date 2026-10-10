@@ -16,77 +16,60 @@ import ViolationList from './features/violations/ViolationList'
 export default function App() {
   const [spec, setSpec] = useState<MapSpec | null>(null)
   const [map, setMap] = useState<GameMap | null>(null)
-  const [seed, setSeed] = useState<number | null>(null)
-  // null means the current map's results are unknown (validation failed).
+  // null means the current map's issues are unknown (validation failed).
   const [explanations, setExplanations] = useState<Explanation[] | null>(null)
   const [busy, setBusy] = useState(false)
-  // Generation/export errors and validation errors are separate so clearing one never hides the other.
   const [error, setError] = useState<string | null>(null)
-  const [validationError, setValidationError] = useState<string | null>(null)
-  // Request counters so late responses are ignored. Editing never cancels a pending
-  // generation; a newly generated map cancels pending validations of the old one.
-  const latestGenerate = useRef(0)
-  const latestMap = useRef(0)
+  // Bumped for every new map, so a late validation of an older map is ignored.
+  const mapVersion = useRef(0)
 
   async function handleIdea(idea: string) {
     setBusy(true)
     setError(null)
-    const id = ++latestGenerate.current
     try {
       const nextSpec = await getSpec(idea)
       // Math.random only picks the seed; the backend generator is deterministic given it.
-      const nextSeed = Math.floor(Math.random() * 2 ** 31)
-      const result = await generate(nextSpec, nextSeed)
-      if (id !== latestGenerate.current) return
-      latestMap.current++
+      const seed = Math.floor(Math.random() * 2 ** 31)
+      const result = await generate(nextSpec, seed)
+      mapVersion.current++
       setSpec(nextSpec)
-      setSeed(nextSeed)
       setMap(result.map)
       setExplanations(result.explanations)
-      setValidationError(null)
     } catch (e) {
-      if (id === latestGenerate.current) setError(String(e))
+      setError(String(e))
     } finally {
       setBusy(false)
     }
   }
 
   async function handleEdit(next: GameMap) {
-    if (!spec) return
+    if (!spec || busy) return // a pending generation would overwrite the edit
     setMap(next)
-    const id = ++latestMap.current
+    const version = ++mapVersion.current
     try {
       const result = await validate(spec, next)
-      if (id !== latestMap.current) return
+      if (version !== mapVersion.current) return
       setExplanations(result.explanations)
-      setValidationError(null)
+      setError(null)
     } catch (e) {
-      if (id !== latestMap.current) return
+      if (version !== mapVersion.current) return
       setExplanations(null)
-      setValidationError(`Validation failed, issues are unknown: ${e}`)
+      setError(`Validation failed, issues are unknown: ${e}`)
     }
   }
 
   async function handleExport() {
     if (!map) return
-    let tiled
     try {
-      tiled = await exportTiled(map)
+      const tiled = await exportTiled(map)
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(tiled, null, 2)]))
+      a.download = 'map.tmj'
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(a.href)) // same-tick revoke can cancel the download
     } catch (e) {
       setError(String(e))
-      return
     }
-    const url = URL.createObjectURL(
-      new Blob([JSON.stringify(tiled, null, 2)], { type: 'application/json' }),
-    )
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'map.tmj'
-    document.body.append(a)
-    a.click()
-    a.remove()
-    // Revoking in the same tick can cancel the download in some browsers.
-    setTimeout(() => URL.revokeObjectURL(url), 0)
   }
 
   return (
@@ -96,10 +79,8 @@ export default function App() {
       {error && <p role="alert">{error}</p>}
       {map && (
         <>
-          <p>Seed: {seed}</p>
           <MapEditor map={map} onChange={handleEdit} />
           <button onClick={handleExport}>Export Tiled JSON</button>
-          {validationError && <p role="alert">{validationError}</p>}
           {explanations && <ViolationList explanations={explanations} />}
         </>
       )}
