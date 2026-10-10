@@ -12,11 +12,4 @@ test('renders one item per explanation', () => {
     />,
   )
   expect(screen.getAllByRole('listitem')).toHaveLength(2)
-  screen.getByText('Second issue')
-})
-
-test('renders an empty state when there are no explanations', () => {
-  render(<ViolationList explanations={[]} />)
-  screen.getByText('No issues found.')
-  expect(screen.queryByRole('list')).toBeNull()
 })

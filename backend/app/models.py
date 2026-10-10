@@ -1,9 +1,9 @@
 """Shared contracts between pipeline stages. Imports nothing from app."""
 
 from enum import IntEnum
-from typing import Any, Self
+from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel
 
 
 class Tile(IntEnum):
@@ -19,19 +19,10 @@ class MapObject(BaseModel):
 
 
 class GameMap(BaseModel):
-    width: int = Field(ge=1)
-    height: int = Field(ge=1)
+    width: int
+    height: int
     tiles: list[list[Tile]]  # tiles[y][x]
     objects: list[MapObject] = []
-
-    @model_validator(mode="after")
-    def check_shape(self) -> Self:
-        if len(self.tiles) != self.height or any(len(row) != self.width for row in self.tiles):
-            raise ValueError(f"tiles must be {self.height} rows of {self.width}")
-        for obj in self.objects:
-            if not (0 <= obj.x < self.width and 0 <= obj.y < self.height):
-                raise ValueError(f"object {obj.kind!r} at ({obj.x}, {obj.y}) is outside the map")
-        return self
 
 
 class Violation(BaseModel):

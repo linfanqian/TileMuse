@@ -2,10 +2,9 @@ import { useState, type FormEvent } from 'react'
 
 type Props = {
   onSubmit: (idea: string) => void
-  busy?: boolean
 }
 
-export default function ChatPanel({ onSubmit, busy = false }: Props) {
+export default function ChatPanel({ onSubmit }: Props) {
   const [idea, setIdea] = useState('')
 
   function handleSubmit(e: FormEvent) {
@@ -21,9 +20,7 @@ export default function ChatPanel({ onSubmit, busy = false }: Props) {
         value={idea}
         onChange={(e) => setIdea(e.target.value)}
       />
-      <button type="submit" disabled={busy}>
-        Generate
-      </button>
+      <button type="submit">Generate</button>
     </form>
   )
 }
