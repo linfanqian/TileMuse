@@ -1,4 +1,8 @@
-"""Map -> Tiled JSON export (https://doc.mapeditor.org/en/stable/reference/json-map-format/)."""
+"""Map -> Tiled JSON export (https://doc.mapeditor.org/en/stable/reference/json-map-format/).
+
+Checked by loading in Tiled 1.12.2: it reads this file without errors and re-saves it as
+format "1.10" with the same `type` fields on tiles and objects.
+"""
 
 from typing import Any
 

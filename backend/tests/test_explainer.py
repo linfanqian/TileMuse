@@ -32,3 +32,9 @@ def test_template_that_cannot_format_its_values_uses_fallback(monkeypatch):
     monkeypatch.setitem(explainer.TEMPLATES, "typed", "At {x:d}.")
     [out] = explain([Violation(code="typed")])  # x is None, so {x:d} raises TypeError
     assert out.text == FALLBACK_TEMPLATE.format(code="typed")
+
+
+def test_fallback_for_broken_template_logs_a_warning(monkeypatch, caplog):
+    monkeypatch.setitem(explainer.TEMPLATES, "typo", "Missing {wat}.")
+    explain([Violation(code="typo")])
+    assert "typo" in caplog.text

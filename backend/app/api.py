@@ -3,7 +3,7 @@
 from random import Random
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.explainer import explain
@@ -62,11 +62,16 @@ async def spec(req: SpecRequest) -> MapSpec:
 @router.post("/generate")
 def generate_map(req: GenerateRequest) -> GenerateResult:
     game_map = generate(req.spec, Random(req.seed))
-    return GenerateResult(map=game_map, **check(game_map, req.spec).model_dump())
+    result = check(game_map, req.spec)
+    return GenerateResult(
+        map=game_map, violations=result.violations, explanations=result.explanations
+    )
 
 
 @router.post("/validate")
 def validate_map(req: ValidateRequest) -> ValidationResult:
+    if (req.map.width, req.map.height) != (req.spec.width, req.spec.height):
+        raise HTTPException(422, "map size does not match spec")
     return check(req.map, req.spec)
 
 

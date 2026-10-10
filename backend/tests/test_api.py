@@ -44,3 +44,27 @@ def test_rejects_map_whose_tiles_do_not_match_its_size():
     assert res.status_code == 422
     res = client.post("/api/validate", json={"spec": MapSpec().model_dump(), "map": bad_map})
     assert res.status_code == 422
+
+
+def test_rejects_map_with_object_outside_it():
+    bad_map = {
+        "width": 2,
+        "height": 1,
+        "tiles": [[0, 0]],
+        "objects": [{"kind": "chest", "x": 2, "y": 0}],
+    }
+    res = client.post("/api/export", json={"map": bad_map})
+    assert res.status_code == 422
+
+
+def test_rejects_map_larger_than_max_size():
+    huge = {"width": 129, "height": 1, "tiles": [[0] * 129]}
+    res = client.post("/api/export", json={"map": huge})
+    assert res.status_code == 422
+
+
+def test_validate_rejects_map_that_does_not_match_spec():
+    spec = MapSpec(width=4, height=4).model_dump()
+    small_map = {"width": 2, "height": 1, "tiles": [[0, 0]]}
+    res = client.post("/api/validate", json={"spec": spec, "map": small_map})
+    assert res.status_code == 422
