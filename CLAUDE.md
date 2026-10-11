@@ -49,5 +49,6 @@ Backend (run in `backend/`):
 ## Git
 
 - IMPORTANT: Never commit or push to `main`. Work on a branch and open a PR to `main`.
+- PRs merge only when CI's `ci-success` check passes (checks run on Ubuntu, Windows, and macOS; see `.github/workflows/ci.yml`).
 - Branch names: `<type>/<person>-<issue#>-<short-name>`, e.g. `feat/janedoe-12-tile-editor`
 - Types (shared by branches and Conventional Commit messages): `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`
