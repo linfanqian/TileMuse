@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   backend:
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -26,6 +27,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.0 # no floating major tag; pin the release
+        with:
+          enable-cache: true
       - name: Install dependencies
         run: uv sync --locked
       # Each check runs even if an earlier one failed, so one run reports every failure.
@@ -40,6 +43,7 @@ jobs:
         run: uv run pytest
 
   frontend:
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -77,12 +81,15 @@ jobs:
 
   api-schema:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -121,6 +128,7 @@ jobs:
     if: always()
     needs: [backend, frontend, api-schema]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Check all jobs passed
         env:
