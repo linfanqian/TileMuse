@@ -5,7 +5,7 @@ AI-assisted 2D map design tool: turns a vague idea into an editable, validated T
 
 ## Architecture (read before changing the pipeline)
 
-idea → **LLM** → spec → **Pydantic schema** → **deterministic generator** → Tiled JSON → **validator** → Violations → **explainer** → editor
+idea → **LLM** → spec → **Pydantic schema** → **deterministic generator** → GameMap → **validator** → Violations → **explainer** → editor. `GameMap` is the internal format every stage shares; Tiled JSON is produced only on export.
 
 - IMPORTANT: The LLM never generates maps or tiles. It only produces the spec. Maps come only from the generator.
 - Spec validation (Pydantic, on LLM output) and map validation (gameplay rules) are separate. Don't merge them.
@@ -15,13 +15,20 @@ idea → **LLM** → spec → **Pydantic schema** → **deterministic generator*
 - The explainer is template-based (one template per violation code). LLM polish is optional and only rephrases. It must never add, drop, or change violations. Templates are the fallback when the LLM is unavailable.
 - Claude API calls happen only in `backend/` (Anthropic Python SDK). Never call the API or expose the key from `frontend/`.
 
+## Module layout
+
+- Backend: one module per pipeline stage in `backend/app/` (`llm`, `generator`, `validator`, `explainer`, `tiled`), each with one public function. Shared contracts live in `models.py` (`GameMap`, `Violation`, `Explanation`) and `spec.py` (`MapSpec`).
+- Imports go one way: `api.py` → stages → shared. Stages never import each other; only `api.py` wires them together. If two stages need the same logic, move it into a shared module.
+- Frontend: `src/features/*` never import each other. They import only from `src/api/`, and `App.tsx` composes them.
+- `frontend/src/api/schema.d.ts` is generated. After changing a backend model or route, run `npm run gen:api` (in `frontend/`, with the backend running) and commit the result.
+
 ## Commands
 
 Frontend (run in `frontend/`):
 - `npm install` / `npm run dev`
 - `npm test` (Vitest). Prefer a single file: `npx vitest run path/to/file.test.ts`
-- `npm run lint` (ESLint) and `npx prettier --check .`
-- `npx tsc --noEmit` to typecheck
+- `npm run lint` (oxlint) and `npx prettier --check .`
+- `npm run typecheck` (`tsc -b`; plain `tsc --noEmit` checks nothing with the project references)
 
 Backend (run in `backend/`):
 - `uv sync` / `uv run fastapi dev` (serves on :8000)
