@@ -148,16 +148,69 @@ export interface components {
         };
         /** MapSpec */
         MapSpec: {
-            /**
-             * Width
-             * @default 16
-             */
+            /** Theme */
+            theme: string;
+            /** Mood */
+            mood: string;
+            /** Width */
             width: number;
-            /**
-             * Height
-             * @default 12
-             */
+            /** Height */
             height: number;
+            /**
+             * Doors
+             * @default 1
+             */
+            doors: number;
+            /**
+             * Objects
+             * @default []
+             */
+            objects: components["schemas"]["ObjectRequirement"][];
+            /**
+             * Rules
+             * @default []
+             */
+            rules: (components["schemas"]["MaxDensityRule"] | components["schemas"]["MinDistanceRule"])[];
+        };
+        /**
+         * MaxDensityRule
+         * @description Objects may cover at most `max` of the room's interior tiles.
+         */
+        MaxDensityRule: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "max_density";
+            /** Max */
+            max: number;
+        };
+        /**
+         * MinDistanceRule
+         * @description Every `a` object is at least `tiles` away (Manhattan distance) from every `b` object.
+         */
+        MinDistanceRule: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "min_distance";
+            a: components["schemas"]["ObjectKind"];
+            b: components["schemas"]["ObjectKind"];
+            /** Tiles */
+            tiles: number;
+        };
+        /**
+         * ObjectKind
+         * @description The fixed object set the generator can place.
+         * @enum {string}
+         */
+        ObjectKind: "player_spawn" | "exit" | "chest" | "guard" | "cover" | "key" | "light";
+        /** ObjectRequirement */
+        ObjectRequirement: {
+            kind: components["schemas"]["ObjectKind"];
+            /** Count */
+            count: number;
         };
         /** SpecRequest */
         SpecRequest: {
