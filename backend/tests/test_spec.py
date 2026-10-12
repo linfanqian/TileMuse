@@ -59,7 +59,7 @@ def test_rejects_unknown_object_kind():
 
 def test_rejects_duplicate_object_kinds():
     objects = [{"kind": "chest", "count": 1}, {"kind": "chest", "count": 2}]
-    with pytest.raises(ValidationError, match="once"):
+    with pytest.raises(ValidationError, match="once in objects: chest \\["):
         MapSpec.model_validate({**FULL_SPEC, "objects": objects, "rules": []})
 
 
@@ -74,3 +74,20 @@ def test_rejects_min_distance_with_missing_kind():
     rules = [{"type": "min_distance", "a": "guard", "b": "key", "tiles": 3}]
     with pytest.raises(ValidationError, match="not in objects"):
         MapSpec.model_validate({**FULL_SPEC, "rules": rules})
+
+
+def test_rejects_density_below_required_objects(make_spec):
+    # 6x6 room: 16 interior tiles, so 4 objects need max >= 0.25.
+    objects = [{"kind": "cover", "count": 4}]
+    make_spec(width=6, height=6, objects=objects, rules=[{"type": "max_density", "max": 0.25}])
+    with pytest.raises(ValidationError, match="max_density"):
+        make_spec(width=6, height=6, objects=objects, rules=[{"type": "max_density", "max": 0.2}])
+
+
+def test_rejects_min_distance_beyond_room(make_spec):
+    # 6x6 room: interior corners are (1, 1) and (4, 4), 6 tiles apart.
+    objects = [{"kind": "guard", "count": 2}]
+    rule = {"type": "min_distance", "a": "guard", "b": "guard"}
+    make_spec(width=6, height=6, objects=objects, rules=[{**rule, "tiles": 6}])
+    with pytest.raises(ValidationError, match="exceeds"):
+        make_spec(width=6, height=6, objects=objects, rules=[{**rule, "tiles": 7}])

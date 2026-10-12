@@ -187,7 +187,9 @@ export interface components {
         };
         /**
          * MinDistanceRule
-         * @description Every `a` object is at least `tiles` away (Manhattan distance) from every `b` object.
+         * @description Every two distinct objects, one `a` and one `b`, are at least `tiles` apart.
+         *
+         *     Distance is Manhattan. With `a == b`, this spaces out objects of that kind.
          */
         MinDistanceRule: {
             /**

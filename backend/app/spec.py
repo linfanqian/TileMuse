@@ -36,7 +36,10 @@ class MaxDensityRule(BaseModel):
 
 
 class MinDistanceRule(BaseModel):
-    """Every `a` object is at least `tiles` away (Manhattan distance) from every `b` object."""
+    """Every two distinct objects, one `a` and one `b`, are at least `tiles` apart.
+
+    Distance is Manhattan. With `a == b`, this spaces out objects of that kind.
+    """
 
     type: Literal["min_distance"] = "min_distance"
     a: ObjectKind
@@ -61,13 +64,24 @@ class MapSpec(BaseModel):
     def check_consistency(self) -> Self:
         dupes = [kind for kind, n in Counter(o.kind for o in self.objects).items() if n > 1]
         if dupes:
-            raise ValueError(f"each object kind may appear once in objects: {dupes}")
+            raise ValueError(f"each object kind may appear once in objects: {', '.join(dupes)}")
         interior = (self.width - 2) * (self.height - 2)
         total = sum(o.count for o in self.objects)
         if total > interior:
             raise ValueError(f"{total} objects do not fit in {interior} interior tiles")
         kinds = {o.kind for o in self.objects}
+        # Farthest apart two interior tiles can be.
+        max_distance = (self.width - 3) + (self.height - 3)
         for rule in self.rules:
-            if isinstance(rule, MinDistanceRule) and not {rule.a, rule.b} <= kinds:
-                raise ValueError(f"min_distance uses kinds not in objects: {rule.a}, {rule.b}")
+            if isinstance(rule, MaxDensityRule) and total > rule.max * interior:
+                raise ValueError(
+                    f"max_density {rule.max} allows fewer than the {total} required objects"
+                )
+            if isinstance(rule, MinDistanceRule):
+                if not {rule.a, rule.b} <= kinds:
+                    raise ValueError(f"min_distance uses kinds not in objects: {rule.a}, {rule.b}")
+                if rule.tiles > max_distance:
+                    raise ValueError(
+                        f"min_distance of {rule.tiles} exceeds the room's {max_distance}"
+                    )
         return self
