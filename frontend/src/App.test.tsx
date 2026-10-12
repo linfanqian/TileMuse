@@ -16,7 +16,17 @@ test('an idea becomes a map with its issues', async () => {
     rules: [],
   })
   vi.mocked(client.generate).mockResolvedValue({
-    map: { width: 2, height: 1, tiles: [[0, 0]], objects: [] },
+    map: {
+      width: 4,
+      height: 4,
+      tiles: [
+        [1, 2, 1, 1],
+        [1, 0, 0, 1],
+        [1, 0, 0, 1],
+        [1, 1, 1, 1],
+      ],
+      objects: [],
+    },
     violations: [],
     explanations: [],
   })

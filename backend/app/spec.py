@@ -69,17 +69,21 @@ class MapSpec(BaseModel):
         total = sum(o.count for o in self.objects)
         if total > interior:
             raise ValueError(f"{total} objects do not fit in {interior} interior tiles")
-        kinds = {o.kind for o in self.objects}
-        # Farthest apart two interior tiles can be.
+        counts = {o.kind: o.count for o in self.objects}
+        # Farthest apart two interior tiles can be. Only rules out specs where no single pair
+        # fits; whether all `count` objects fit at once is left to the validator.
         max_distance = (self.width - 3) + (self.height - 3)
         for rule in self.rules:
-            if isinstance(rule, MaxDensityRule) and total > rule.max * interior:
+            # Same ratio the validator checks, so both agree on boundary values.
+            if isinstance(rule, MaxDensityRule) and total / interior > rule.max:
                 raise ValueError(
                     f"max_density {rule.max} allows fewer than the {total} required objects"
                 )
             if isinstance(rule, MinDistanceRule):
-                if not {rule.a, rule.b} <= kinds:
+                if not {rule.a, rule.b} <= counts.keys():
                     raise ValueError(f"min_distance uses kinds not in objects: {rule.a}, {rule.b}")
+                if rule.a == rule.b and counts[rule.a] < 2:
+                    raise ValueError(f"min_distance between {rule.a} objects needs at least 2")
                 if rule.tiles > max_distance:
                     raise ValueError(
                         f"min_distance of {rule.tiles} exceeds the room's {max_distance}"

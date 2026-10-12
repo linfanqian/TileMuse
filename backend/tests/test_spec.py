@@ -84,6 +84,19 @@ def test_rejects_density_below_required_objects(make_spec):
         make_spec(width=6, height=6, objects=objects, rules=[{"type": "max_density", "max": 0.2}])
 
 
+def test_density_boundary_is_not_rejected_by_rounding(make_spec):
+    # 0.29 * 100 is 28.999999999999996 in floating point; 29 / 100 <= 0.29 must still pass.
+    objects = [{"kind": "cover", "count": 29}]
+    make_spec(width=12, height=12, objects=objects, rules=[{"type": "max_density", "max": 0.29}])
+
+
+def test_rejects_same_kind_min_distance_with_one_object(make_spec):
+    rule = {"type": "min_distance", "a": "guard", "b": "guard", "tiles": 3}
+    make_spec(objects=[{"kind": "guard", "count": 2}], rules=[rule])
+    with pytest.raises(ValidationError, match="at least 2"):
+        make_spec(objects=[{"kind": "guard", "count": 1}], rules=[rule])
+
+
 def test_rejects_min_distance_beyond_room(make_spec):
     # 6x6 room: interior corners are (1, 1) and (4, 4), 6 tiles apart.
     objects = [{"kind": "guard", "count": 2}]
