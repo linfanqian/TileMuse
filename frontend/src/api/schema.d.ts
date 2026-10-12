@@ -174,7 +174,9 @@ export interface components {
         };
         /**
          * MaxDensityRule
-         * @description Objects may cover at most `max` of the room's interior tiles.
+         * @description `objects / interior` may be at most `max`.
+         *
+         *     `interior` is the (width - 2) * (height - 2) tiles inside the outer walls, whatever is on them.
          */
         MaxDensityRule: {
             /**

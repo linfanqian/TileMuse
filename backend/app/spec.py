@@ -29,7 +29,10 @@ class ObjectRequirement(BaseModel):
 
 
 class MaxDensityRule(BaseModel):
-    """Objects may cover at most `max` of the room's interior tiles."""
+    """`objects / interior` may be at most `max`.
+
+    `interior` is the (width - 2) * (height - 2) tiles inside the outer walls, whatever is on them.
+    """
 
     type: Literal["max_density"] = "max_density"
     max: float = Field(gt=0, le=1)
@@ -70,18 +73,27 @@ class MapSpec(BaseModel):
         if total > interior:
             raise ValueError(f"{total} objects do not fit in {interior} interior tiles")
         counts = {o.kind: o.count for o in self.objects}
+        # One max_density, and one min_distance per unordered pair of kinds.
+        keys = [
+            frozenset((r.a, r.b)) if isinstance(r, MinDistanceRule) else r.type for r in self.rules
+        ]
+        if len(set(keys)) != len(keys):
+            raise ValueError("rules may not repeat a max_density or a min_distance pair")
         # Farthest apart two interior tiles can be. Only rules out specs where no single pair
         # fits; whether all `count` objects fit at once is left to the validator.
         max_distance = (self.width - 3) + (self.height - 3)
         for rule in self.rules:
-            # Same ratio the validator checks, so both agree on boundary values.
+            # The validator must compute this same ratio so both agree on boundary values.
             if isinstance(rule, MaxDensityRule) and total / interior > rule.max:
                 raise ValueError(
                     f"max_density {rule.max} allows fewer than the {total} required objects"
                 )
             if isinstance(rule, MinDistanceRule):
-                if not {rule.a, rule.b} <= counts.keys():
-                    raise ValueError(f"min_distance uses kinds not in objects: {rule.a}, {rule.b}")
+                missing = sorted({rule.a, rule.b} - counts.keys())
+                if missing:
+                    raise ValueError(
+                        f"min_distance uses kinds not in objects: {', '.join(missing)}"
+                    )
                 if rule.a == rule.b and counts[rule.a] < 2:
                     raise ValueError(f"min_distance between {rule.a} objects needs at least 2")
                 if rule.tiles > max_distance:

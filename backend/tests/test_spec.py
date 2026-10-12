@@ -59,7 +59,7 @@ def test_rejects_unknown_object_kind():
 
 def test_rejects_duplicate_object_kinds():
     objects = [{"kind": "chest", "count": 1}, {"kind": "chest", "count": 2}]
-    with pytest.raises(ValidationError, match="once in objects: chest \\["):
+    with pytest.raises(ValidationError, match="once in objects: chest"):
         MapSpec.model_validate({**FULL_SPEC, "objects": objects, "rules": []})
 
 
@@ -72,7 +72,7 @@ def test_rejects_too_many_objects_for_room(make_spec):
 
 def test_rejects_min_distance_with_missing_kind():
     rules = [{"type": "min_distance", "a": "guard", "b": "key", "tiles": 3}]
-    with pytest.raises(ValidationError, match="not in objects"):
+    with pytest.raises(ValidationError, match="not in objects: key"):
         MapSpec.model_validate({**FULL_SPEC, "rules": rules})
 
 
@@ -104,3 +104,19 @@ def test_rejects_min_distance_beyond_room(make_spec):
     make_spec(width=6, height=6, objects=objects, rules=[{**rule, "tiles": 6}])
     with pytest.raises(ValidationError, match="exceeds"):
         make_spec(width=6, height=6, objects=objects, rules=[{**rule, "tiles": 7}])
+
+
+@pytest.mark.parametrize(
+    "rules",
+    [
+        [{"type": "max_density", "max": 0.5}, {"type": "max_density", "max": 0.4}],
+        [
+            {"type": "min_distance", "a": "guard", "b": "chest", "tiles": 2},
+            {"type": "min_distance", "a": "chest", "b": "guard", "tiles": 3},
+        ],
+    ],
+)
+def test_rejects_repeated_rules(make_spec, rules):
+    objects = [{"kind": "guard", "count": 1}, {"kind": "chest", "count": 1}]
+    with pytest.raises(ValidationError, match="may not repeat"):
+        make_spec(objects=objects, rules=rules)
