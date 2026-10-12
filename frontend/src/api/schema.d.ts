@@ -148,16 +148,73 @@ export interface components {
         };
         /** MapSpec */
         MapSpec: {
-            /**
-             * Width
-             * @default 16
-             */
+            /** Theme */
+            theme: string;
+            /** Mood */
+            mood: string;
+            /** Width */
             width: number;
-            /**
-             * Height
-             * @default 12
-             */
+            /** Height */
             height: number;
+            /**
+             * Doors
+             * @default 1
+             */
+            doors: number;
+            /**
+             * Objects
+             * @default []
+             */
+            objects: components["schemas"]["ObjectRequirement"][];
+            /**
+             * Rules
+             * @default []
+             */
+            rules: (components["schemas"]["MaxDensityRule"] | components["schemas"]["MinDistanceRule"])[];
+        };
+        /**
+         * MaxDensityRule
+         * @description `objects / interior` may be at most `max`.
+         *
+         *     `interior` is the (width - 2) * (height - 2) tiles inside the outer walls, whatever is on them.
+         */
+        MaxDensityRule: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "max_density";
+            /** Max */
+            max: number;
+        };
+        /**
+         * MinDistanceRule
+         * @description Every two distinct objects, one `a` and one `b`, are at least `tiles` apart.
+         *
+         *     Distance is Manhattan. With `a == b`, this spaces out objects of that kind.
+         */
+        MinDistanceRule: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "min_distance";
+            a: components["schemas"]["ObjectKind"];
+            b: components["schemas"]["ObjectKind"];
+            /** Tiles */
+            tiles: number;
+        };
+        /**
+         * ObjectKind
+         * @description The fixed object set the generator can place.
+         * @enum {string}
+         */
+        ObjectKind: "player_spawn" | "exit" | "chest" | "guard" | "cover" | "key" | "light";
+        /** ObjectRequirement */
+        ObjectRequirement: {
+            kind: components["schemas"]["ObjectKind"];
+            /** Count */
+            count: number;
         };
         /** SpecRequest */
         SpecRequest: {

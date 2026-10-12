@@ -18,13 +18,13 @@ def test_spec_returns_valid_spec():
     MapSpec.model_validate(res.json())
 
 
-def test_generate_requires_seed():
-    res = client.post("/api/generate", json={"spec": MapSpec().model_dump()})
+def test_generate_requires_seed(make_spec):
+    res = client.post("/api/generate", json={"spec": make_spec().model_dump(mode="json")})
     assert res.status_code == 422
 
 
-def test_generate_then_validate_roundtrip():
-    spec = MapSpec().model_dump()
+def test_generate_then_validate_roundtrip(make_spec):
+    spec = make_spec().model_dump(mode="json")
     res = client.post("/api/generate", json={"spec": spec, "seed": 1})
     assert res.status_code == 200
     generated = res.json()
@@ -40,11 +40,13 @@ def test_generate_then_validate_roundtrip():
     assert res.json()["type"] == "map"
 
 
-def test_rejects_map_whose_tiles_do_not_match_its_size():
+def test_rejects_map_whose_tiles_do_not_match_its_size(make_spec):
     bad_map = {"width": 3, "height": 2, "tiles": [[0, 0, 0], [0, 0]]}
     res = client.post("/api/export", json={"map": bad_map})
     assert res.status_code == 422
-    res = client.post("/api/validate", json={"spec": MapSpec().model_dump(), "map": bad_map})
+    res = client.post(
+        "/api/validate", json={"spec": make_spec().model_dump(mode="json"), "map": bad_map}
+    )
     assert res.status_code == 422
 
 
@@ -56,4 +58,11 @@ def test_rejects_map_with_object_outside_it():
         "objects": [{"kind": "chest", "x": 2, "y": 0}],
     }
     res = client.post("/api/export", json={"map": bad_map})
+    assert res.status_code == 422
+
+
+def test_generate_rejects_invalid_spec(make_spec):
+    spec = make_spec().model_dump(mode="json")
+    spec["objects"] = [{"kind": "dragon", "count": 1}]
+    res = client.post("/api/generate", json={"spec": spec, "seed": 1})
     assert res.status_code == 422
