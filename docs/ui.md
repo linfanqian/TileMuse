@@ -46,7 +46,7 @@ flowchart LR
 
 ## Design decisions
 
-- **Two kinds of problems, two treatments.** Hard rules (exit reachable from the door, required objects present) make an unplayable map, so a breaking edit is reverted with a toast, as the proposal's "reject invalid changes and revert" asks. Spec rules (`min_distance`, `max_density`) are listed as issues the user can fix or accept, since fixing them may take several moves.
+- **Two kinds of problems, two treatments.** Hard rules (exit reachable from the door, required objects present) make an unplayable map, so a breaking edit is reverted with a toast, as the proposal's "reject invalid changes and revert" asks. Spec rules (`min_distance`, `max_density`) are listed as issues the user can fix or accept, since fixing them may take several moves. Implementation is tracked in #17.
 - **The spec stays visible.** It is a side panel in the interview and a tab in the editor, so it is the single source of truth the user can always see and edit.
 - **Choices over open questions.** Every interview question offers 2-4 concrete answers, for users without design training.
 - **Explanations come from the explainer.** Issue text and fixes come from its templates, so the UI never invents violations.
