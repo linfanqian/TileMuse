@@ -1,0 +1,319 @@
+<!doctype html>
+<!--
+  Source for the UI mockups in docs/ui/. Open with ?screen=interview or ?screen=editor,
+  or regenerate the PNGs (see docs/ui.md). Static and self-contained: no scripts from the app.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TileMuse mockup</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --line: #e3e0d9; --text: #22201c; --muted: #6f6a60;
+    --accent: #3d5afe; --accent-soft: #e8ecff; --ok: #2e7d4f; --ok-soft: #e4f3ea;
+    --warn: #b3261e; --warn-soft: #fbe9e7; --pending: #9a6b00; --pending-soft: #fff4d6;
+    --floor: #d9cfbd; --wall: #4a4238; --door: #b07a3c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .screen { width: 1440px; height: 900px; display: none; flex-direction: column; }
+  .screen.on { display: flex; }
+
+  header { height: 56px; display: flex; align-items: center; gap: 24px; padding: 0 20px;
+           background: var(--panel); border-bottom: 1px solid var(--line); }
+  .logo { font-weight: 700; font-size: 18px; letter-spacing: -.2px; }
+  .logo span { color: var(--accent); }
+  .steps { display: flex; gap: 6px; }
+  .step { padding: 4px 12px; border-radius: 999px; color: var(--muted); background: var(--bg); }
+  .step.on { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+  .step.done { color: var(--ok); }
+  .grow { flex: 1; }
+  .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px;
+         padding: 7px 14px; font: inherit; color: var(--text); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.disabled { opacity: .45; }
+  .seed { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  .seed code { background: var(--bg); padding: 4px 8px; border-radius: 6px; color: var(--text); }
+
+  .body { flex: 1; display: flex; min-height: 0; }
+  .panel { background: var(--panel); border-right: 1px solid var(--line); display: flex;
+           flex-direction: column; min-height: 0; }
+  .panel h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .6px;
+              color: var(--muted); }
+  .pad { padding: 16px 20px; }
+  .note { color: var(--muted); font-size: 12.5px; }
+  .callout { position: absolute; background: #222; color: #fff; font-size: 12px; padding: 4px 9px;
+             border-radius: 6px; white-space: nowrap; }
+  .callout::before { content: attr(data-n); display: inline-block; width: 16px; height: 16px;
+                     margin-right: 6px; border-radius: 50%; background: #ffcc00; color: #222;
+                     text-align: center; line-height: 16px; font-weight: 700; }
+
+  /* Interview */
+  .chat { flex: 1; display: flex; flex-direction: column; }
+  .msgs { flex: 1; padding: 24px 48px; display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+  .msg { max-width: 640px; padding: 12px 16px; border-radius: 14px; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.agent { background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .why { margin-top: 6px; color: var(--muted); font-size: 12.5px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip { border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 5px 12px;
+          background: var(--panel); }
+  .chip.picked { background: var(--accent); color: #fff; }
+  .chip.ghost { border-style: dashed; color: var(--muted); border-color: var(--line); }
+  .composer { margin: 0 48px 24px; display: flex; gap: 8px; background: var(--panel);
+              border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+  .composer .input { flex: 1; padding: 6px 8px; color: var(--muted); }
+
+  .spec { width: 460px; border-left: 1px solid var(--line); border-right: 0; }
+  .summary { background: var(--bg); border-radius: 10px; padding: 12px 14px; margin-top: 10px; }
+  .progress { height: 6px; background: var(--bg); border-radius: 3px; margin: 8px 0 4px; }
+  .progress i { display: block; height: 100%; width: 71%; background: var(--accent); border-radius: 3px; }
+  .fields { list-style: none; margin: 0; padding: 0; }
+  .fields li { display: flex; gap: 10px; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .fields .k { width: 110px; color: var(--muted); flex: none; }
+  .fields .v { flex: 1; }
+  .tag { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; flex: none; }
+  .tag.ok { background: var(--ok-soft); color: var(--ok); }
+  .tag.ask { background: var(--pending-soft); color: var(--pending); }
+  .tag.todo { background: var(--bg); color: var(--muted); }
+
+  /* Editor */
+  .rail { width: 300px; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tab { flex: 1; text-align: center; padding: 11px 0; color: var(--muted); }
+  .tab.on { color: var(--accent); border-bottom: 2px solid var(--accent); font-weight: 600; }
+  .form { display: flex; flex-direction: column; gap: 14px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .row label { color: var(--muted); }
+  .box { border: 1px solid var(--line); border-radius: 7px; padding: 5px 10px; min-width: 64px; text-align: right; }
+  .box.text { text-align: left; flex: 1; }
+  .stepper { display: flex; align-items: center; gap: 8px; }
+  .stepper b { width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 6px;
+               display: inline-flex; align-items: center; justify-content: center; font-weight: 400; color: var(--muted); }
+  .rule { background: var(--bg); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+
+  .stage { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+  .tools { display: flex; align-items: center; gap: 6px; padding: 10px 16px; background: var(--panel);
+           border-bottom: 1px solid var(--line); }
+  .tool { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line);
+          display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+  .tool.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .sep { width: 1px; height: 24px; background: var(--line); margin: 0 6px; }
+  .canvas { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .map { display: grid; grid-template-columns: repeat(20, 34px); grid-auto-rows: 34px; gap: 1px;
+         background: #bfb39f; border: 1px solid #bfb39f; position: relative; }
+  .t { background: var(--floor); display: flex; align-items: center; justify-content: center; position: relative; }
+  .t.w { background: var(--wall); }
+  .t.d { background: var(--door); }
+  .t.bad { outline: 3px solid var(--warn); outline-offset: -3px; z-index: 1; }
+  .t.ghostwall { background: repeating-linear-gradient(45deg, #4a423855 0 4px, transparent 4px 8px), var(--floor);
+                 outline: 2px dashed var(--warn); outline-offset: -2px; }
+  .o { width: 24px; height: 24px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700;
+       display: flex; align-items: center; justify-content: center; }
+  .o.P { background: #2e7d4f; } .o.E { background: #3d5afe; } .o.G { background: #b3261e; }
+  .o.C { background: #6d5a3a; border-radius: 4px; } .o.K { background: #c99700; } .o.L { background: #e08a00; }
+  .o.H { background: #7b4fa0; border-radius: 4px; }
+  .statusbar { display: flex; gap: 20px; padding: 8px 16px; background: var(--panel);
+               border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
+  .toast { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); width: 560px;
+           background: #22201c; color: #fff; border-radius: 10px; padding: 12px 16px;
+           display: flex; gap: 14px; align-items: center; box-shadow: 0 8px 24px #0003; }
+  .toast .grow { font-size: 13px; }
+  .toast a { color: #9fb0ff; font-weight: 600; }
+
+  .issues { width: 340px; border-left: 1px solid var(--line); border-right: 0; }
+  .count { display: inline-block; background: var(--warn-soft); color: var(--warn); border-radius: 999px;
+           padding: 0 8px; margin-left: 6px; font-weight: 600; }
+  .issue { border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 8px;
+           padding: 12px 14px; margin-top: 12px; }
+  .issue.sel { background: var(--warn-soft); }
+  .issue h3 { margin: 0 0 4px; font-size: 14px; }
+  .issue p { margin: 4px 0; }
+  .issue .fix { color: var(--text); }
+  .issue .fix b { color: var(--ok); }
+  .issue .links { display: flex; gap: 14px; margin-top: 8px; color: var(--accent); font-size: 13px; }
+  .passing { margin-top: 16px; color: var(--ok); }
+  .passing li { color: var(--text); margin: 4px 0; }
+  .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 10px; font-size: 12.5px; }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .legend .o { width: 16px; height: 16px; font-size: 9px; }
+</style>
+</head>
+<body>
+
+<!-- ============ Screen 1: Interview ============ -->
+<section class="screen" id="interview">
+  <header>
+    <div class="logo">Tile<span>Muse</span></div>
+    <div class="steps"><div class="step on">1 · Interview</div><div class="step">2 · Edit</div><div class="step">3 · Export</div></div>
+    <div class="grow"></div>
+    <div class="btn">Start over</div>
+  </header>
+  <div class="body">
+    <div class="chat">
+      <div class="msgs">
+        <div class="msg user">A creepy abandoned library where the player sneaks past guards.</div>
+        <div class="msg agent">
+          Love it. How big should the room be?
+          <div class="why">Bigger rooms give longer guard routes but take longer to cross.</div>
+          <div class="chips"><span class="chip">Small · 12×10</span><span class="chip picked">Medium · 20×14</span><span class="chip">Large · 32×24</span><span class="chip ghost">Something else…</span></div>
+        </div>
+        <div class="msg user">Medium · 20×14</div>
+        <div class="msg agent">
+          How many guards patrol the library?
+          <div class="why">Each guard needs cover nearby so the player can hide. I'll add bookshelves as cover.</div>
+          <div class="chips"><span class="chip">1 guard</span><span class="chip">2 guards</span><span class="chip">3 guards</span><span class="chip ghost">You decide</span></div>
+        </div>
+      </div>
+      <div class="composer"><div class="input">Pick an option or type your own answer…</div><div class="btn primary">Send</div></div>
+    </div>
+
+    <aside class="panel spec">
+      <div class="pad">
+        <div class="row"><h2>Design spec</h2><span class="note">Edit JSON</span></div>
+        <div class="summary">A <b>creepy abandoned library</b>, 20×14 tiles, with one door. The player starts by the door and must reach the exit while staying away from guards.</div>
+        <div class="progress"><i></i></div>
+        <div class="note">5 of 7 fields ready · the interview ends when all are specific</div>
+      </div>
+      <div class="pad" style="padding-top:0">
+        <ul class="fields">
+          <li><span class="k">Theme</span><span class="v">abandoned library</span><span class="tag ok">ready</span></li>
+          <li><span class="k">Mood</span><span class="v">creepy</span><span class="tag ok">ready</span></li>
+          <li><span class="k">Size</span><span class="v">20 × 14</span><span class="tag ok">ready</span></li>
+          <li><span class="k">Doors</span><span class="v">1</span><span class="tag ok">ready</span></li>
+          <li><span class="k">Objects</span><span class="v">player spawn ×1, exit ×1, guard ×?</span><span class="tag ask">asking</span></li>
+          <li><span class="k">Cover</span><span class="v">bookshelves (count from guards)</span><span class="tag todo">next</span></li>
+          <li><span class="k">Layout rules</span><span class="v">guards ≥ 5 tiles from spawn, ≥ 4 apart</span><span class="tag ok">ready</span></li>
+        </ul>
+      </div>
+      <div class="grow"></div>
+      <div class="pad" style="border-top:1px solid var(--line)">
+        <div class="btn primary disabled" style="text-align:center">Generate map</div>
+        <div class="note" style="margin-top:6px;text-align:center">Available once every field is ready</div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ Screen 2: Editor ============ -->
+<section class="screen" id="editor">
+  <header>
+    <div class="logo">Tile<span>Muse</span></div>
+    <div class="steps"><div class="step done">✓ Interview</div><div class="step on">2 · Edit</div><div class="step">3 · Export</div></div>
+    <div class="grow"></div>
+    <div class="seed">Seed <code>4821</code><span class="btn">⟳ Regenerate</span></div>
+    <div class="btn">Undo</div>
+    <div class="btn primary">Export Tiled JSON</div>
+  </header>
+  <div class="body">
+    <aside class="panel rail">
+      <div class="tabs"><div class="tab">Chat</div><div class="tab on">Spec</div></div>
+      <div class="pad form">
+        <div class="summary" style="margin:0">A creepy abandoned library, 20×14, one door, 2 guards with bookshelves for cover.</div>
+        <div class="row"><label>Theme</label><div class="box text">abandoned library</div></div>
+        <div class="row"><label>Mood</label><div class="box text">creepy</div></div>
+        <div class="row"><label>Size</label><div class="box">20</div>×<div class="box">14</div></div>
+        <div class="row"><label>Doors</label><div class="stepper"><b>−</b>1<b>+</b></div></div>
+        <h2 style="margin-top:6px">Objects</h2>
+        <div class="row"><label>Player spawn</label><div class="stepper"><b>−</b>1<b>+</b></div></div>
+        <div class="row"><label>Exit</label><div class="stepper"><b>−</b>1<b>+</b></div></div>
+        <div class="row"><label>Guard</label><div class="stepper"><b>−</b>2<b>+</b></div></div>
+        <div class="row"><label>Cover</label><div class="stepper"><b>−</b>8<b>+</b></div></div>
+        <div class="note">+ Add object</div>
+        <h2 style="margin-top:6px">Layout rules</h2>
+        <div class="rule">Guards ≥ <b>5</b> tiles from player spawn</div>
+        <div class="rule">Guards ≥ <b>4</b> tiles apart</div>
+        <div class="rule">Objects cover ≤ <b>20%</b> of the room</div>
+        <div class="note">Changing the spec regenerates the map with the same seed.</div>
+      </div>
+    </aside>
+
+    <div class="stage">
+      <div class="tools">
+        <span class="tool on">↖</span><span class="tool">⌫</span><span class="sep"></span>
+        <span class="tool" style="background:var(--floor)"></span>
+        <span class="tool" style="background:var(--wall)"></span>
+        <span class="tool" style="background:var(--door)"></span><span class="sep"></span>
+        <span class="tool"><span class="o P" style="width:18px;height:18px;font-size:9px">P</span></span>
+        <span class="tool"><span class="o E" style="width:18px;height:18px;font-size:9px">E</span></span>
+        <span class="tool"><span class="o G" style="width:18px;height:18px;font-size:9px">G</span></span>
+        <span class="tool"><span class="o H" style="width:18px;height:18px;font-size:9px">C</span></span>
+        <span class="tool"><span class="o C" style="width:18px;height:18px;font-size:9px">Ch</span></span>
+        <span class="tool"><span class="o K" style="width:18px;height:18px;font-size:9px">K</span></span>
+        <span class="tool"><span class="o L" style="width:18px;height:18px;font-size:9px">L</span></span>
+        <div class="grow"></div>
+        <span class="note">Click to paint · drag to move objects</span>
+      </div>
+      <div class="canvas"><div class="map" id="map"></div></div>
+      <div class="toast">
+        <div class="grow">↺ <b>Edit reverted.</b> A bookshelf at (18, 2) would seal the exit off from the door.</div>
+        <a>Why?</a>
+      </div>
+      <div class="statusbar"><span>(18, 2) · floor</span><span>20 × 14</span><span>Validated after every edit</span></div>
+    </div>
+
+    <aside class="panel issues">
+      <div class="pad">
+        <h2>Issues<span class="count">2</span></h2>
+        <div class="issue sel">
+          <h3>Guard too close to spawn</h3>
+          <p class="note">Rule: min distance (guard, player spawn)</p>
+          <p>The guard at (4, 11) is 3 tiles from the player spawn; the spec needs at least 5.</p>
+          <p class="fix"><b>Fix:</b> drag the guard 2 tiles farther away, or lower the distance in the spec.</p>
+          <div class="links"><span>Show on map</span><span>Edit rule</span></div>
+        </div>
+        <div class="issue">
+          <h3>Guards too close together</h3>
+          <p class="note">Rule: min distance (guard, guard)</p>
+          <p>The guards at (4, 11) and (6, 10) are 3 tiles apart; the spec needs at least 4.</p>
+          <p class="fix"><b>Fix:</b> move one guard 1 tile farther from the other.</p>
+          <div class="links"><span>Show on map</span></div>
+        </div>
+        <div class="passing">✓ 3 rules passing
+          <ul style="margin:6px 0 0;padding-left:18px">
+            <li>Exit reachable from the door</li>
+            <li>All required objects present</li>
+            <li>Density 6% ≤ 20%</li>
+          </ul>
+        </div>
+        <h2 style="margin-top:22px">Legend</h2>
+        <div class="legend">
+          <span><span class="o P">P</span>Player spawn</span><span><span class="o E">E</span>Exit</span>
+          <span><span class="o G">G</span>Guard</span><span><span class="o H">C</span>Cover</span>
+          <span><span class="o C">Ch</span>Chest</span><span><span class="o K">K</span>Key</span>
+          <span><span class="o L">L</span>Light</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<script>
+  // Builds the static 20x14 sample map; mockup only.
+  const W = 20, H = 14;
+  const objects = { "2,12": "P", "18,1": "E", "4,11": "G", "6,10": "G",
+    "17,1": "H", "10,4": "H", "11,4": "H", "10,5": "H", "14,7": "H", "14,8": "H", "5,5": "H", "6,5": "H",
+    "8,2": "L", "15,10": "C" };
+  const map = document.getElementById("map");
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const t = document.createElement("div");
+    const edge = x === 0 || y === 0 || x === W - 1 || y === H - 1;
+    t.className = "t" + (edge ? " w" : "");
+    if (x === 2 && y === 13) t.className = "t d";
+    if (x === 4 && y === 11) t.classList.add("bad");
+    const kind = objects[x + "," + y];
+    const label = { H: "C", C: "Ch" }[kind] || kind;
+    if (kind) t.innerHTML = '<div class="o ' + kind + '">' + label + "</div>";
+    // The reverted edit: a bookshelf that would seal the exit in.
+    if (x === 18 && y === 2) {
+      t.classList.add("ghostwall");
+      t.innerHTML = '<div class="o H" style="opacity:.45">C</div>';
+    }
+    map.appendChild(t);
+  }
+  const screen = new URLSearchParams(location.search).get("screen") || "interview";
+  document.getElementById(screen).classList.add("on");
+</script>
+</body>
+</html>
