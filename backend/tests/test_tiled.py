@@ -2,12 +2,11 @@ from random import Random
 
 from app.generator import generate
 from app.models import GameMap, MapObject, Tile
-from app.spec import MapSpec
 from app.tiled import TILE_SIZE, to_tiled
 
 
-def test_export_shape_and_gids():
-    game_map = generate(MapSpec(width=8, height=5), Random(0))
+def test_export_shape_and_gids(make_spec):
+    game_map = generate(make_spec(width=8, height=5), Random(0))
     out = to_tiled(game_map)
 
     for key in ("width", "height", "tilewidth", "tileheight", "orientation", "layers", "tilesets"):
