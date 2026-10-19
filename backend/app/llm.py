@@ -1,8 +1,9 @@
 """Shared Claude API client. The only module that calls the Claude API. Imports nothing from app."""
 
 import logging
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -152,3 +153,101 @@ async def complete[T: BaseModel](
     except ValidationError as e:
         logger.warning("Claude's %s output failed validation twice: %s", output.__name__, e)
         raise LLMError("Claude's output failed validation twice") from e
+
+
+@dataclass(frozen=True)
+class TextDelta:
+    """The next piece of the message to the user."""
+
+    text: str
+
+
+@dataclass(frozen=True)
+class Reset:
+    """A server-side fallback switched models mid-output. Discard the text shown so far."""
+
+
+@dataclass(frozen=True)
+class Done[T]:
+    """The validated structured result, and the whole message without any declined part."""
+
+    result: T
+    text: str
+
+
+SUBMIT = "submit"
+_SUBMIT_INSTRUCTION = (
+    f"Write your message to the user as plain text, then call the {SUBMIT} tool once "
+    "with the structured result."
+)
+
+
+def _tool_calls(response: BetaMessage) -> list[BetaContentBlock]:
+    return [b for b in _after_fallback(response.content) if b.type == "tool_use"]
+
+
+def _submission[T: BaseModel](response: BetaMessage, output: type[T]) -> T:
+    """The validated `submit` input. Raises ValidationError, or LookupError if it's missing."""
+    for call in _tool_calls(response):
+        if call.name == SUBMIT:
+            return output.model_validate(call.input)
+    raise LookupError(f"The {SUBMIT} tool wasn't called")
+
+
+def _feedback(response: BetaMessage, error: Exception) -> BetaMessageParam:
+    """The user turn asking for a corrected submission, without repeating the message."""
+    calls = _tool_calls(response)
+    if not calls:
+        return {
+            "role": "user",
+            "content": f"Call the {SUBMIT} tool with the structured result. "
+            "Don't repeat your message.",
+        }
+    # Every tool_use needs a matching tool_result.
+    text = (
+        f"Invalid input:\n{error}\nCall {SUBMIT} again with corrected input. "
+        "Don't repeat your message."
+    )
+    results = [
+        {"type": "tool_result", "tool_use_id": call.id, "is_error": True, "content": text}
+        for call in calls
+    ]
+    return {"role": "user", "content": results}
+
+
+async def stream[T: BaseModel](
+    system: str, messages: list[BetaMessageParam], output: type[T]
+) -> AsyncIterator[TextDelta | Reset | Done[T]]:
+    """Streams the message to the user, then yields the validated `output` from a `submit` call.
+
+    An invalid submission is retried once with the errors. The retry's text isn't yielded.
+    """
+    system = f"{system}\n\n{_SUBMIT_INSTRUCTION}"
+    tools = [
+        {
+            "name": SUBMIT,
+            "description": "Submit the structured result.",
+            "input_schema": anthropic.transform_schema(output),
+            "strict": True,
+        }
+    ]
+    with _api_errors():
+        async with _stream(system, messages, tools=tools) as events:
+            async for event in events:
+                if event.type == "text":
+                    yield TextDelta(event.text)
+                elif event.type == "content_block_start" and event.content_block.type == "fallback":
+                    yield Reset()
+            response = await events.get_final_message()
+    text = _text(_check(response))
+    try:
+        result = _submission(response, output)
+    except (ValidationError, LookupError) as e:
+        retry = [*messages, _echo(response), _feedback(response, e)]
+        response = await _create(system, retry, tools=tools)
+        try:
+            result = _submission(response, output)
+        except (ValidationError, LookupError) as e:
+            logger.warning("Claude's %s submission failed validation twice: %s", output.__name__, e)
+            raise LLMError("Claude's submission failed validation twice") from e
+    yield Done(result, text)

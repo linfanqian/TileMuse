@@ -146,3 +146,85 @@ def test_rejects_refusal_and_truncation(fake_llm, caplog, stop_reason):
         complete()
     assert len(fake_llm.requests) == 1
     assert f"stop_reason={stop_reason}" in caplog.text
+
+
+def stream_events():
+    async def collect():
+        return [event async for event in llm.stream(SYSTEM, MESSAGES, output=Answer)]
+
+    return asyncio.run(collect())
+
+
+def test_stream_yields_text_then_done(fake_llm):
+    fake_llm.reply("Hello there.", submit={"word": "hello"})
+    events = stream_events()
+    assert events == [llm.TextDelta("Hello there."), llm.Done(Answer(word="hello"), "Hello there.")]
+    (request,) = fake_llm.requests
+    (tool,) = request["tools"]
+    assert tool["name"] == "submit"
+    assert tool["strict"] is True
+    assert tool["input_schema"] == anthropic.transform_schema(Answer)
+    assert request["system"].startswith(SYSTEM)
+
+
+def test_stream_resets_on_fallback(fake_llm):
+    declined = SimpleNamespace(type="text", text="Partial")
+    fake_llm.reply("Hello.", submit={"word": "hello"}, before_fallback=[declined])
+    events = stream_events()
+    assert events == [
+        llm.TextDelta("Partial"),
+        llm.Reset(),
+        llm.TextDelta("Hello."),
+        llm.Done(Answer(word="hello"), "Hello."),
+    ]
+
+
+def test_stream_retries_invalid_submission_with_tool_result(fake_llm):
+    fake_llm.reply("Hello.", submit={"word": "hi"})
+    fake_llm.reply("Not shown.", submit={"word": "hello"})
+    events = stream_events()
+    assert events == [llm.TextDelta("Hello."), llm.Done(Answer(word="hello"), "Hello.")]
+    first, second = fake_llm.requests
+    *history, assistant, feedback = second["messages"]
+    assert history == MESSAGES
+    assert [block.type for block in assistant["content"]] == ["text", "tool_use"]
+    (result,) = feedback["content"]
+    call_id = assistant["content"][1].id
+    assert result["type"] == "tool_result"
+    assert (result["tool_use_id"], result["is_error"]) == (call_id, True)
+    assert "at least 3 characters" in result["content"]
+    assert second["tools"] == first["tools"]
+
+
+def test_stream_asks_for_submit_when_missing(fake_llm):
+    fake_llm.reply("Hello.")
+    fake_llm.reply(submit={"word": "hello"})
+    events = stream_events()
+    assert events[-1] == llm.Done(Answer(word="hello"), "Hello.")
+    feedback = fake_llm.requests[1]["messages"][-1]
+    assert feedback["role"] == "user"
+    assert "submit" in feedback["content"]
+
+
+def test_stream_fails_after_second_invalid_submission(fake_llm, caplog):
+    fake_llm.reply("Hello.", submit={"word": "hi"})
+    fake_llm.reply(submit={"word": "no"})
+    with pytest.raises(llm.LLMError):
+        stream_events()
+    assert len(fake_llm.requests) == 2
+    assert "Answer submission failed validation twice" in caplog.text
+
+
+def test_stream_wraps_api_errors(fake_llm):
+    error = anthropic.APIConnectionError(request=REQUEST)
+    fake_llm.fail(error)
+    with pytest.raises(llm.LLMError) as excinfo:
+        stream_events()
+    assert excinfo.value.__cause__ is error
+
+
+def test_stream_rejects_refusal(fake_llm):
+    fake_llm.reply("Hel", stop_reason="refusal")
+    with pytest.raises(llm.LLMError, match="refusal"):
+        stream_events()
+    assert len(fake_llm.requests) == 1
