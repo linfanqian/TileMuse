@@ -61,6 +61,7 @@ async def _create(
         )
     except anthropic.AuthenticationError as e:
         logger.warning("Claude rejected the API key: %s", _describe(e))
+        _client.cache_clear()  # Pick up a fixed backend/.env without a restart.
         raise LLMUnavailable("ANTHROPIC_API_KEY in backend/.env was rejected") from e
     except anthropic.APIError as e:  # Includes timeouts and connection errors.
         logger.warning("Claude request failed: %s", _describe(e))

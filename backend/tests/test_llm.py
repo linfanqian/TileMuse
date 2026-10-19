@@ -111,6 +111,17 @@ def test_rejected_key_raises_unavailable(fake_llm, caplog):
     assert "AuthenticationError" in caplog.text
 
 
+def test_fixed_key_is_used_after_a_rejected_one(fake_llm, monkeypatch):
+    fake_llm.fail(status_error(anthropic.AuthenticationError, 401, "invalid x-api-key"))
+    with pytest.raises(llm.LLMUnavailable):
+        complete()
+    # The user fixes backend/.env without restarting the server.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fixed-key")
+    fake_llm.reply('{"word": "hello"}')
+    assert complete() == Answer(word="hello")
+    assert fake_llm.client_kwargs["api_key"] == "fixed-key"
+
+
 @pytest.mark.parametrize("stop_reason", ["refusal", "max_tokens"])
 def test_rejects_refusal_and_truncation(fake_llm, caplog, stop_reason):
     fake_llm.reply('{"word": "hello"}', stop_reason=stop_reason)
