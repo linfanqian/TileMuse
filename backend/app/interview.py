@@ -1,4 +1,4 @@
-"""Idea -> spec. The only module allowed to call the Claude API. It never produces maps."""
+"""Idea -> spec. The LLM only fills in the spec; it never produces maps."""
 
 from app.spec import MapSpec, ObjectKind, ObjectRequirement
 

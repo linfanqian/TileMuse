@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.explainer import explain
 from app.generator import generate
-from app.llm import idea_to_spec
+from app.interview import idea_to_spec
 from app.models import Explanation, GameMap, Violation
 from app.spec import MapSpec
 from app.tiled import to_tiled
