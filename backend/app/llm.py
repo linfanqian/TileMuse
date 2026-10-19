@@ -117,11 +117,18 @@ def _text(response: BetaMessage) -> str:
     return "".join(b.text for b in _after_fallback(response.content) if b.type == "text")
 
 
-def _echo(response: BetaMessage) -> BetaMessageParam:
-    """The reply as an assistant turn. Before a fallback, the API accepts only text back."""
+def _retry(
+    messages: list[BetaMessageParam], response: BetaMessage, feedback: BetaMessageParam
+) -> list[BetaMessageParam]:
+    """The conversation for a retry: the reply as an assistant turn, then the feedback.
+
+    Before a fallback, the API accepts only text back. An empty reply is left out, because
+    the API rejects an assistant turn with no content.
+    """
     last = _last_fallback(response.content)
     content = [b for i, b in enumerate(response.content) if i >= last or b.type == "text"]
-    return {"role": "assistant", "content": content}
+    echo: list[BetaMessageParam] = [{"role": "assistant", "content": content}] if content else []
+    return [*messages, *echo, feedback]
 
 
 async def complete_text(system: str, messages: list[BetaMessageParam]) -> str:
@@ -139,14 +146,11 @@ async def complete[T: BaseModel](
     try:
         return output.model_validate_json(_text(response))
     except ValidationError as e:
-        messages = [
-            *messages,
-            _echo(response),
-            {
-                "role": "user",
-                "content": f"That JSON failed validation:\n{e}\nReply with corrected JSON.",
-            },
-        ]
+        feedback: BetaMessageParam = {
+            "role": "user",
+            "content": f"That JSON failed validation:\n{e}\nReply with corrected JSON.",
+        }
+        messages = _retry(messages, response, feedback)
     response = await _create(system, messages, output_config=output_config)
     try:
         return output.model_validate_json(_text(response))
@@ -243,7 +247,7 @@ async def stream[T: BaseModel](
     try:
         result = _submission(response, output)
     except (ValidationError, LookupError) as e:
-        retry = [*messages, _echo(response), _feedback(response, e)]
+        retry = _retry(messages, response, _feedback(response, e))
         response = await _create(system, retry, tools=tools)
         try:
             result = _submission(response, output)

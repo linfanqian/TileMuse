@@ -228,3 +228,22 @@ def test_stream_rejects_refusal(fake_llm):
     with pytest.raises(llm.LLMError, match="refusal"):
         stream_events()
     assert len(fake_llm.requests) == 1
+
+
+def test_complete_retry_skips_an_empty_reply(fake_llm):
+    # The API rejects an assistant turn with no content.
+    fake_llm.reply("")
+    fake_llm.reply('{"word": "hello"}')
+    assert complete() == Answer(word="hello")
+    *history, feedback = fake_llm.requests[1]["messages"]
+    assert history == MESSAGES
+    assert feedback["role"] == "user"
+
+
+def test_stream_retry_skips_an_empty_reply(fake_llm):
+    fake_llm.reply("")
+    fake_llm.reply(submit={"word": "hello"})
+    assert stream_events() == [llm.Done(Answer(word="hello"), "")]
+    *history, feedback = fake_llm.requests[1]["messages"]
+    assert history == MESSAGES
+    assert feedback["role"] == "user"
