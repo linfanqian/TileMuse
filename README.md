@@ -17,4 +17,4 @@ npm install
 npm run dev
 ```
 
-Copy `backend/.env.example` to `backend/.env` and set `ANTHROPIC_API_KEY` once the LLM stage is implemented.
+Copy `backend/.env.example` to `backend/.env` and set `ANTHROPIC_API_KEY`. Without it, `/api/spec` returns 503. Generation, validation, and export don't need it.
