@@ -1,5 +1,7 @@
 import json
 
+import anthropic
+import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
@@ -27,6 +29,15 @@ def test_spec_returns_503_without_key(monkeypatch):
     res = client.post("/api/spec", json={"idea": "a small dungeon room"})
     assert res.status_code == 503
     assert "ANTHROPIC_API_KEY is not set" in res.json()["detail"]
+
+
+def test_spec_returns_503_when_key_is_rejected(fake_llm):
+    request = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    response = httpx2.Response(401, request=request)
+    fake_llm.fail(anthropic.AuthenticationError("invalid x-api-key", response=response, body=None))
+    res = client.post("/api/spec", json={"idea": "a small dungeon room"})
+    assert res.status_code == 503
+    assert "rejected" in res.json()["detail"]
 
 
 def test_spec_returns_502_after_two_invalid_specs(fake_llm, make_spec):

@@ -20,6 +20,11 @@ def complete():
     return asyncio.run(llm.complete(SYSTEM, MESSAGES, output=Answer))
 
 
+def status_error(cls, status, message):
+    response = httpx2.Response(status, request=REQUEST, headers={"request-id": "req_123"})
+    return cls(message, response=response, body=None)
+
+
 def test_client_uses_timeout_and_one_retry(fake_llm):
     fake_llm.reply('{"word": "hello"}')
     complete()
@@ -52,13 +57,14 @@ def test_complete_retries_once_with_validation_feedback(fake_llm):
     assert "at least 3 characters" in feedback["content"]
 
 
-def test_complete_fails_after_second_invalid_reply(fake_llm):
+def test_complete_fails_after_second_invalid_reply(fake_llm, caplog):
     fake_llm.reply('{"word": "hi"}')
     fake_llm.reply("not json")
     with pytest.raises(llm.LLMError) as excinfo:
         complete()
     assert isinstance(excinfo.value.__cause__, ValidationError)
     assert len(fake_llm.requests) == 2
+    assert "Answer output failed validation twice" in caplog.text
 
 
 def test_complete_text_returns_text(fake_llm):
@@ -87,9 +93,28 @@ def test_wraps_api_errors(fake_llm, error):
     assert len(fake_llm.requests) == 1
 
 
+def test_logs_api_errors_without_the_key(fake_llm, caplog):
+    fake_llm.fail(status_error(anthropic.BadRequestError, 400, "fallbacks: unknown field"))
+    with pytest.raises(llm.LLMError):
+        complete()
+    for part in ("BadRequestError", "status 400", "req_123", "fallbacks: unknown field"):
+        assert part in caplog.text
+    assert "test-key" not in caplog.text
+
+
+def test_rejected_key_raises_unavailable(fake_llm, caplog):
+    error = status_error(anthropic.AuthenticationError, 401, "invalid x-api-key")
+    fake_llm.fail(error)
+    with pytest.raises(llm.LLMUnavailable, match="rejected") as excinfo:
+        complete()
+    assert excinfo.value.__cause__ is error
+    assert "AuthenticationError" in caplog.text
+
+
 @pytest.mark.parametrize("stop_reason", ["refusal", "max_tokens"])
-def test_rejects_refusal_and_truncation(fake_llm, stop_reason):
+def test_rejects_refusal_and_truncation(fake_llm, caplog, stop_reason):
     fake_llm.reply('{"word": "hello"}', stop_reason=stop_reason)
     with pytest.raises(llm.LLMError, match=stop_reason):
         complete()
     assert len(fake_llm.requests) == 1
+    assert f"stop_reason={stop_reason}" in caplog.text

@@ -1,5 +1,6 @@
 """Shared Claude API client. The only module that calls the Claude API. Imports nothing from app."""
 
+import logging
 from functools import cache
 from pathlib import Path
 
@@ -15,8 +16,11 @@ TIMEOUT_SECONDS = 60.0  # Per request; bounds load on the backend.
 SDK_RETRIES = 1  # Network, 429 and 5xx retries, separate from the validation retry.
 
 
+logger = logging.getLogger(__name__)
+
+
 class LLMUnavailable(Exception):
-    """No API key is configured."""
+    """No API key is configured, or the API rejected it."""
 
 
 class LLMError(Exception):
@@ -55,11 +59,25 @@ async def _create(
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
         )
+    except anthropic.AuthenticationError as e:
+        logger.warning("Claude rejected the API key: %s", _describe(e))
+        raise LLMUnavailable("ANTHROPIC_API_KEY in backend/.env was rejected") from e
     except anthropic.APIError as e:  # Includes timeouts and connection errors.
+        logger.warning("Claude request failed: %s", _describe(e))
         raise LLMError(f"Claude request failed: {type(e).__name__}") from e
     if response.stop_reason in ("refusal", "max_tokens"):
+        logger.warning("Claude returned no usable output: stop_reason=%s", response.stop_reason)
         raise LLMError(f"Claude returned no usable output (stop_reason={response.stop_reason})")
     return response
+
+
+def _describe(e: anthropic.APIError) -> str:
+    """Error type, status, request ID and the API's message. These never contain the key."""
+    if isinstance(e, anthropic.APIStatusError):
+        return (
+            f"{type(e).__name__} (status {e.status_code}, request_id {e.request_id}): {e.message}"
+        )
+    return f"{type(e).__name__}: {e.message}"
 
 
 def _text(response: BetaMessage) -> str:
@@ -94,4 +112,5 @@ async def complete[T: BaseModel](
     try:
         return output.model_validate_json(_text(response))
     except ValidationError as e:
+        logger.warning("Claude's %s output failed validation twice: %s", output.__name__, e)
         raise LLMError("Claude's output failed validation twice") from e
