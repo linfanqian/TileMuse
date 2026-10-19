@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -37,6 +38,19 @@ def test_spec_returns_502_after_two_invalid_specs(fake_llm, make_spec):
     res = client.post("/api/spec", json={"idea": "a small dungeon room"})
     assert res.status_code == 502
     assert len(fake_llm.requests) == 2
+
+
+@pytest.mark.parametrize("idea", ["", "x" * 2001])
+def test_spec_rejects_bad_idea_length(fake_llm, idea):
+    res = client.post("/api/spec", json={"idea": idea})
+    assert res.status_code == 422
+    assert fake_llm.requests == []
+
+
+def test_spec_accepts_idea_at_length_limit(fake_llm, make_spec):
+    fake_llm.reply(make_spec().model_dump_json())
+    res = client.post("/api/spec", json={"idea": "x" * 2000})
+    assert res.status_code == 200
 
 
 def test_generate_requires_seed(make_spec):

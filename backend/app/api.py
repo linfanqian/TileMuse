@@ -4,7 +4,7 @@ from random import Random
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.explainer import explain
 from app.generator import generate
@@ -19,7 +19,8 @@ router = APIRouter()
 
 
 class SpecRequest(BaseModel):
-    idea: str
+    # Bounds the LLM's token cost.
+    idea: str = Field(min_length=1, max_length=2000)
 
 
 class GenerateRequest(BaseModel):
