@@ -1,3 +1,5 @@
+import json
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -12,10 +14,29 @@ def test_health():
     assert res.json() == {"status": "ok"}
 
 
-def test_spec_returns_valid_spec():
+def test_spec_returns_valid_spec(fake_llm, make_spec):
+    fake_llm.reply(make_spec().model_dump_json())
     res = client.post("/api/spec", json={"idea": "a small dungeon room"})
     assert res.status_code == 200
-    MapSpec.model_validate(res.json())
+    assert MapSpec.model_validate(res.json()) == make_spec()
+
+
+def test_spec_returns_503_without_key(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    res = client.post("/api/spec", json={"idea": "a small dungeon room"})
+    assert res.status_code == 503
+    assert "ANTHROPIC_API_KEY is not set" in res.json()["detail"]
+
+
+def test_spec_returns_502_after_two_invalid_specs(fake_llm, make_spec):
+    # Valid JSON, but min_distance names a kind that isn't in objects.
+    bad = make_spec().model_dump(mode="json")
+    bad["rules"] = [{"type": "min_distance", "a": "guard", "b": "key", "tiles": 3}]
+    fake_llm.reply(json.dumps(bad))
+    fake_llm.reply(json.dumps(bad))
+    res = client.post("/api/spec", json={"idea": "a small dungeon room"})
+    assert res.status_code == 502
+    assert len(fake_llm.requests) == 2
 
 
 def test_generate_requires_seed(make_spec):
