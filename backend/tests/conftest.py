@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator, Sequence
 from types import SimpleNamespace
 from typing import Any
 
@@ -20,6 +20,30 @@ def make_spec() -> Callable[..., MapSpec]:
     return make
 
 
+class FakeStream:
+    """Stands in for the SDK's message stream: events from the reply's blocks, then the reply."""
+
+    def __init__(self, reply: SimpleNamespace | Exception) -> None:
+        self._reply = reply
+
+    async def __aenter__(self) -> "FakeStream":
+        if isinstance(self._reply, Exception):
+            raise self._reply
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        return None
+
+    async def __aiter__(self) -> AsyncIterator[SimpleNamespace]:
+        for block in self._reply.content:
+            yield SimpleNamespace(type="content_block_start", content_block=block)
+            if block.type == "text":
+                yield SimpleNamespace(type="text", text=block.text)
+
+    async def get_final_message(self) -> SimpleNamespace:
+        return self._reply
+
+
 class FakeLLM:
     """Stands in for `anthropic.AsyncAnthropic`. Returns scripted replies in order."""
 
@@ -28,8 +52,24 @@ class FakeLLM:
         self.requests: list[dict[str, Any]] = []
         self._replies: list[SimpleNamespace | Exception] = []
 
-    def reply(self, text: str, stop_reason: str = "end_turn") -> None:
-        content = [SimpleNamespace(type="text", text=text)]
+    def reply(
+        self,
+        text: str = "",
+        *,
+        submit: dict[str, Any] | None = None,
+        before_fallback: Sequence[SimpleNamespace] = (),
+        stop_reason: str | None = None,
+    ) -> None:
+        """Scripts one reply: declined blocks and a `fallback` block, text, a submit call."""
+        content = [*before_fallback, SimpleNamespace(type="fallback")] if before_fallback else []
+        if text:
+            content.append(SimpleNamespace(type="text", text=text))
+        if submit is not None:
+            call_id = f"toolu_{len(self._replies)}"
+            call = SimpleNamespace(type="tool_use", id=call_id, name="submit", input=submit)
+            content.append(call)
+        if stop_reason is None:
+            stop_reason = "tool_use" if submit is not None else "end_turn"
         self._replies.append(SimpleNamespace(stop_reason=stop_reason, content=content))
 
     def fail(self, error: Exception) -> None:
@@ -37,14 +77,11 @@ class FakeLLM:
 
     def client(self, **kwargs: Any) -> SimpleNamespace:
         self.client_kwargs = kwargs
-        return SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(create=self._create)))
+        return SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(stream=self._stream)))
 
-    async def _create(self, **kwargs: Any) -> SimpleNamespace:
+    def _stream(self, **kwargs: Any) -> FakeStream:
         self.requests.append(kwargs)
-        reply = self._replies.pop(0)
-        if isinstance(reply, Exception):
-            raise reply
-        return reply
+        return FakeStream(self._replies.pop(0))
 
 
 @pytest.fixture(autouse=True)

@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 
 import anthropic
 import httpx2
@@ -67,11 +68,27 @@ def test_complete_fails_after_second_invalid_reply(fake_llm, caplog):
     assert "Answer output failed validation twice" in caplog.text
 
 
+def test_complete_ignores_text_before_fallback(fake_llm):
+    declined = SimpleNamespace(type="text", text='{"word": "he')
+    fake_llm.reply('{"word": "hello"}', before_fallback=[declined])
+    assert complete() == Answer(word="hello")
+    assert len(fake_llm.requests) == 1
+
+
+def test_retry_echo_drops_blocks_before_fallback(fake_llm):
+    declined = [SimpleNamespace(type="thinking"), SimpleNamespace(type="text", text='{"wo')]
+    fake_llm.reply('{"word": "hi"}', before_fallback=declined)
+    fake_llm.reply('{"word": "hello"}')
+    assert complete() == Answer(word="hello")
+    *_, assistant, _feedback = fake_llm.requests[1]["messages"]
+    assert [block.type for block in assistant["content"]] == ["text", "fallback", "text"]
+
+
 def test_complete_text_returns_text(fake_llm):
     fake_llm.reply("Hello.")
     assert asyncio.run(llm.complete_text(SYSTEM, MESSAGES)) == "Hello."
     (request,) = fake_llm.requests
-    assert request["output_config"] is anthropic.omit  # The SDK leaves it out of the request.
+    assert "output_config" not in request
 
 
 def test_without_key_raises_unavailable(monkeypatch):

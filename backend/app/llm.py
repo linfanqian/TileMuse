@@ -1,18 +1,26 @@
 """Shared Claude API client. The only module that calls the Claude API. Imports nothing from app."""
 
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import cache
 from pathlib import Path
+from typing import Any
 
 import anthropic
-from anthropic import Omit, omit
-from anthropic.types.beta import BetaMessage, BetaMessageParam, BetaOutputConfigParam
+from anthropic.lib.streaming import BetaAsyncMessageStreamManager
+from anthropic.types.beta import (
+    BetaContentBlock,
+    BetaMessage,
+    BetaMessageParam,
+    BetaOutputConfigParam,
+)
 from pydantic import BaseModel, SecretStr, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 MODEL = "claude-opus-5-5"
 MAX_TOKENS = 16000
-TIMEOUT_SECONDS = 60.0  # Per request; bounds load on the backend.
+TIMEOUT_SECONDS = 60.0  # Requests stream, so this bounds the gap between chunks.
 SDK_RETRIES = 1  # Network, 429 and 5xx retries, separate from the validation retry.
 
 
@@ -43,22 +51,11 @@ def _client() -> anthropic.AsyncAnthropic:
     )
 
 
-async def _create(
-    system: str,
-    messages: list[BetaMessageParam],
-    output_config: BetaOutputConfigParam | Omit = omit,
-) -> BetaMessage:
-    """Sends one request. Raises LLMError on API errors, refusals and truncation."""
+@contextmanager
+def _api_errors() -> Iterator[None]:
+    """Logs SDK errors and turns them into LLMUnavailable or LLMError."""
     try:
-        response = await _client().beta.messages.create(
-            model=MODEL,
-            max_tokens=MAX_TOKENS,
-            system=system,
-            messages=messages,
-            output_config=output_config,
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
-        )
+        yield
     except anthropic.AuthenticationError as e:
         logger.warning("Claude rejected the API key: %s", _describe(e))
         _client.cache_clear()  # Pick up a fixed backend/.env without a restart.
@@ -66,10 +63,6 @@ async def _create(
     except anthropic.APIError as e:  # Includes timeouts and connection errors.
         logger.warning("Claude request failed: %s", _describe(e))
         raise LLMError(f"Claude request failed: {type(e).__name__}") from e
-    if response.stop_reason in ("refusal", "max_tokens"):
-        logger.warning("Claude returned no usable output: stop_reason=%s", response.stop_reason)
-        raise LLMError(f"Claude returned no usable output (stop_reason={response.stop_reason})")
-    return response
 
 
 def _describe(e: anthropic.APIError) -> str:
@@ -81,8 +74,53 @@ def _describe(e: anthropic.APIError) -> str:
     return f"{type(e).__name__}: {e.message}"
 
 
+def _stream(
+    system: str, messages: list[BetaMessageParam], **params: Any
+) -> BetaAsyncMessageStreamManager:
+    return _client().beta.messages.stream(
+        model=MODEL,
+        max_tokens=MAX_TOKENS,
+        system=system,
+        messages=messages,
+        betas=["server-side-fallback-2026-07-01"],
+        fallbacks="default",
+        **params,
+    )
+
+
+def _check(response: BetaMessage) -> BetaMessage:
+    if response.stop_reason in ("refusal", "max_tokens"):
+        logger.warning("Claude returned no usable output: stop_reason=%s", response.stop_reason)
+        raise LLMError(f"Claude returned no usable output (stop_reason={response.stop_reason})")
+    return response
+
+
+async def _create(system: str, messages: list[BetaMessageParam], **params: Any) -> BetaMessage:
+    """Sends one request and waits for the whole reply. Raises LLMError on any failure."""
+    with _api_errors():
+        async with _stream(system, messages, **params) as stream:
+            response = await stream.get_final_message()
+    return _check(response)
+
+
+def _last_fallback(content: list[BetaContentBlock]) -> int:
+    """Index of the last `fallback` block, or -1. What comes before it was declined."""
+    return max((i for i, block in enumerate(content) if block.type == "fallback"), default=-1)
+
+
+def _after_fallback(content: list[BetaContentBlock]) -> list[BetaContentBlock]:
+    return content[_last_fallback(content) + 1 :]
+
+
 def _text(response: BetaMessage) -> str:
-    return "".join(block.text for block in response.content if block.type == "text")
+    return "".join(b.text for b in _after_fallback(response.content) if b.type == "text")
+
+
+def _echo(response: BetaMessage) -> BetaMessageParam:
+    """The reply as an assistant turn. Before a fallback, the API accepts only text back."""
+    last = _last_fallback(response.content)
+    content = [b for i, b in enumerate(response.content) if i >= last or b.type == "text"]
+    return {"role": "assistant", "content": content}
 
 
 async def complete_text(system: str, messages: list[BetaMessageParam]) -> str:
@@ -96,20 +134,19 @@ async def complete[T: BaseModel](
     output_config: BetaOutputConfigParam = {
         "format": {"type": "json_schema", "schema": anthropic.transform_schema(output)}
     }
-    response = await _create(system, messages, output_config)
+    response = await _create(system, messages, output_config=output_config)
     try:
         return output.model_validate_json(_text(response))
     except ValidationError as e:
         messages = [
             *messages,
-            # The full reply, unchanged, as the API requires for thinking blocks.
-            {"role": "assistant", "content": response.content},
+            _echo(response),
             {
                 "role": "user",
                 "content": f"That JSON failed validation:\n{e}\nReply with corrected JSON.",
             },
         ]
-    response = await _create(system, messages, output_config)
+    response = await _create(system, messages, output_config=output_config)
     try:
         return output.model_validate_json(_text(response))
     except ValidationError as e:
