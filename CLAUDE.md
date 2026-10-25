@@ -13,11 +13,11 @@ idea → **LLM** → spec → **Pydantic schema** → **deterministic generator*
 - Tiled JSON format and GID validity are ensured by the export code itself and verified by tests, not checked at runtime by the validator. Exception: imported maps (stretch) are external input and must be format-validated at import.
 - The generator is deterministic: same spec + seed gives an identical map. The seed is required. Use no global/unseeded randomness. Pass a seeded RNG explicitly.
 - The explainer is template-based (one template per violation code). LLM polish is optional and only rephrases. It must never add, drop, or change violations. Templates are the fallback when the LLM is unavailable.
-- Claude API calls happen only in `backend/` (Anthropic Python SDK). Never call the API or expose the key from `frontend/`.
+- Claude API calls happen only in `backend/`, through the shared `app/llm.py` (Anthropic Python SDK). Never call the API or expose the key from `frontend/`.
 
 ## Module layout
 
-- Backend: one module per pipeline stage in `backend/app/` (`llm`, `generator`, `validator`, `explainer`, `tiled`), each with one public function. Shared contracts live in `models.py` (`GameMap`, `Violation`, `Explanation`) and `spec.py` (`MapSpec`).
+- Backend: one module per pipeline stage in `backend/app/` (`interview`, `generator`, `validator`, `explainer`, `tiled`), each with one public function. Shared contracts live in `models.py` (`GameMap`, `Violation`, `Explanation`) and `spec.py` (`MapSpec`). The shared `llm.py` is the Claude client.
 - Imports go one way: `api.py` → stages → shared. Stages never import each other; only `api.py` wires them together. If two stages need the same logic, move it into a shared module.
 - Frontend: `src/features/*` never import each other. They import only from `src/api/`, and `App.tsx` composes them.
 - `frontend/src/api/schema.d.ts` is generated. After changing a backend model or route, run `npm run gen:api` (in `frontend/`, with the backend running) and commit the result.

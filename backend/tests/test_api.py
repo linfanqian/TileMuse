@@ -1,3 +1,8 @@
+import json
+
+import anthropic
+import httpx2
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -12,10 +17,65 @@ def test_health():
     assert res.json() == {"status": "ok"}
 
 
-def test_spec_returns_valid_spec():
+def test_spec_returns_valid_spec(fake_llm, make_spec):
+    fake_llm.reply(make_spec().model_dump_json())
     res = client.post("/api/spec", json={"idea": "a small dungeon room"})
     assert res.status_code == 200
-    MapSpec.model_validate(res.json())
+    assert MapSpec.model_validate(res.json()) == make_spec()
+
+
+def test_spec_returns_503_without_key(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    res = client.post("/api/spec", json={"idea": "a small dungeon room"})
+    assert res.status_code == 503
+    assert "ANTHROPIC_API_KEY is not set" in res.json()["detail"]
+
+
+def test_spec_returns_503_when_key_is_rejected(fake_llm):
+    request = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    response = httpx2.Response(401, request=request)
+    fake_llm.fail(anthropic.AuthenticationError("invalid x-api-key", response=response, body=None))
+    res = client.post("/api/spec", json={"idea": "a small dungeon room"})
+    assert res.status_code == 503
+    assert "rejected" in res.json()["detail"]
+
+
+def test_spec_returns_502_after_two_invalid_specs(fake_llm, make_spec):
+    # Valid JSON, but min_distance names a kind that isn't in objects.
+    bad = make_spec().model_dump(mode="json")
+    bad["rules"] = [{"type": "min_distance", "a": "guard", "b": "key", "tiles": 3}]
+    fake_llm.reply(json.dumps(bad))
+    fake_llm.reply(json.dumps(bad))
+    res = client.post("/api/spec", json={"idea": "a small dungeon room"})
+    assert res.status_code == 502
+    assert len(fake_llm.requests) == 2
+
+
+def test_spec_returns_502_when_the_connection_drops_mid_reply(fake_llm):
+    fake_llm.fail(httpx2.ReadTimeout("timed out"), midway=True)
+    res = client.post("/api/spec", json={"idea": "a small dungeon room"})
+    assert res.status_code == 502
+
+
+@pytest.mark.parametrize("idea", ["", "   ", "\n\t", "x" * 2001])
+def test_spec_rejects_bad_idea_length(fake_llm, idea):
+    res = client.post("/api/spec", json={"idea": idea})
+    assert res.status_code == 422
+    assert fake_llm.requests == []
+
+
+def test_spec_strips_whitespace_from_the_idea(fake_llm, make_spec):
+    fake_llm.reply(make_spec().model_dump_json())
+    res = client.post("/api/spec", json={"idea": "  a small dungeon room\n"})
+    assert res.status_code == 200
+    (request,) = fake_llm.requests
+    assert request["messages"] == [{"role": "user", "content": "a small dungeon room"}]
+
+
+def test_spec_accepts_idea_at_length_limit(fake_llm, make_spec):
+    fake_llm.reply(make_spec().model_dump_json())
+    res = client.post("/api/spec", json={"idea": "x" * 2000})
+    assert res.status_code == 200
 
 
 def test_generate_requires_seed(make_spec):
