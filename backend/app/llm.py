@@ -103,8 +103,8 @@ def _check(response: BetaMessage) -> BetaMessage:
 async def _create(system: str, messages: list[BetaMessageParam], **params: Any) -> BetaMessage:
     """Sends one request and waits for the whole reply. Raises LLMError on any failure."""
     with _api_errors():
-        async with _stream(system, messages, **params) as stream:
-            response = await stream.get_final_message()
+        async with _stream(system, messages, **params) as events:
+            response = await events.get_final_message()
     return _check(response)
 
 
