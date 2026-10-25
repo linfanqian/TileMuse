@@ -235,6 +235,8 @@ async def stream[T: BaseModel](
     """Streams the message to the user, then yields the validated `output` from a `submit` call.
 
     An invalid submission is retried once with the errors. The retry's text isn't yielded.
+    LLMError can be raised after text was yielded, with no Reset first. Callers discard that
+    text.
     """
     system = f"{system}\n\n{_SUBMIT_INSTRUCTION}"
     tools = [
