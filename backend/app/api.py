@@ -1,10 +1,10 @@
 """HTTP routes. The only module that wires pipeline stages together."""
 
 from random import Random
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, StringConstraints
 
 from app.explainer import explain
 from app.generator import generate
@@ -19,8 +19,8 @@ router = APIRouter()
 
 
 class SpecRequest(BaseModel):
-    # Bounds the LLM's token cost.
-    idea: str = Field(min_length=1, max_length=2000)
+    # Bounds the LLM's token cost. A blank idea would still cost a call.
+    idea: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
 
 
 class GenerateRequest(BaseModel):

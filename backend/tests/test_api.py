@@ -57,11 +57,19 @@ def test_spec_returns_502_when_the_connection_drops_mid_reply(fake_llm):
     assert res.status_code == 502
 
 
-@pytest.mark.parametrize("idea", ["", "x" * 2001])
+@pytest.mark.parametrize("idea", ["", "   ", "\n\t", "x" * 2001])
 def test_spec_rejects_bad_idea_length(fake_llm, idea):
     res = client.post("/api/spec", json={"idea": idea})
     assert res.status_code == 422
     assert fake_llm.requests == []
+
+
+def test_spec_strips_whitespace_from_the_idea(fake_llm, make_spec):
+    fake_llm.reply(make_spec().model_dump_json())
+    res = client.post("/api/spec", json={"idea": "  a small dungeon room\n"})
+    assert res.status_code == 200
+    (request,) = fake_llm.requests
+    assert request["messages"] == [{"role": "user", "content": "a small dungeon room"}]
 
 
 def test_spec_accepts_idea_at_length_limit(fake_llm, make_spec):
