@@ -110,7 +110,11 @@ def test_wraps_api_errors(fake_llm, error):
     assert len(fake_llm.requests) == 1
 
 
-MIDWAY_ERRORS = [httpx2.ReadTimeout("timed out"), httpx2.RemoteProtocolError("peer closed")]
+MIDWAY_ERRORS = [
+    httpx2.ReadTimeout("timed out"),
+    httpx2.RemoteProtocolError("peer closed"),
+    httpx2.DecodingError("bad gzip chunk"),
+]
 
 
 @pytest.mark.parametrize("error", MIDWAY_ERRORS)
@@ -279,13 +283,23 @@ def test_retry_skips_a_reply_with_only_a_fallback_left(fake_llm):
     assert feedback["role"] == "user"
 
 
-def test_retry_echo_drops_empty_text(fake_llm):
-    # The API rejects empty text blocks.
-    fake_llm.reply('{"word": "hi"}', before_fallback=[SimpleNamespace(type="text", text="")])
+@pytest.mark.parametrize("blank", ["", " \n"])
+def test_retry_echo_drops_blank_text(fake_llm, blank):
+    # The API rejects whitespace-only text blocks.
+    fake_llm.reply('{"word": "hi"}', before_fallback=[SimpleNamespace(type="text", text=blank)])
     fake_llm.reply('{"word": "hello"}')
     assert complete() == Answer(word="hello")
     *_, assistant, _feedback = fake_llm.requests[1]["messages"]
     assert [block.type for block in assistant["content"]] == ["fallback", "text"]
+
+
+def test_complete_retry_skips_a_blank_reply(fake_llm):
+    fake_llm.reply("\n")
+    fake_llm.reply('{"word": "hello"}')
+    assert complete() == Answer(word="hello")
+    *history, feedback = fake_llm.requests[1]["messages"]
+    assert history == MESSAGES
+    assert feedback["role"] == "user"
 
 
 def test_stream_retry_skips_an_empty_reply(fake_llm):

@@ -65,7 +65,7 @@ def _api_errors() -> Iterator[None]:
     except anthropic.APIError as e:  # Includes timeouts and connection errors.
         logger.warning("Claude request failed: %s", _describe(e))
         raise LLMError(f"Claude request failed: {type(e).__name__}") from e
-    except httpx2.TransportError as e:  # The SDK passes these through once the reply streams.
+    except httpx2.RequestError as e:  # The SDK passes these through once the reply streams.
         logger.warning("Claude request failed mid-reply: %s: %s", type(e).__name__, e)
         raise LLMError(f"Claude request failed: {type(e).__name__}") from e
 
@@ -126,15 +126,15 @@ def _retry(
 ) -> list[BetaMessageParam]:
     """The conversation for a retry: the reply as an assistant turn, then the feedback.
 
-    Before a fallback, the API accepts only text back. The API rejects empty text blocks and
-    an assistant turn with no content, so empty text is dropped, and a reply with nothing left
-    but `fallback` blocks (which aren't rendered into the prompt) is left out.
+    Before a fallback, the API accepts only text back. The API rejects whitespace-only text
+    blocks and an assistant turn with no content, so such text is dropped, and a reply with
+    nothing left but `fallback` blocks (which aren't rendered into the prompt) is left out.
     """
     last = _last_fallback(response.content)
     content = [
         b
         for i, b in enumerate(response.content)
-        if (i >= last or b.type == "text") and not (b.type == "text" and not b.text)
+        if (b.text.strip() if b.type == "text" else i >= last)
     ]
     rendered = any(b.type != "fallback" for b in content)
     echo: list[BetaMessageParam] = [{"role": "assistant", "content": content}] if rendered else []
