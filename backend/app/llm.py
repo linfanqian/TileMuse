@@ -114,7 +114,7 @@ async def _create(system: str, messages: list[BetaMessageParam], **params: Any) 
 
 
 def _last_fallback(content: list[BetaContentBlock]) -> int:
-    """Index of the last `fallback` block, or -1. What comes before it was declined."""
+    """Index of the last `fallback` block, or -1. A declining model produced what's before it."""
     return max((i for i, block in enumerate(content) if block.type == "fallback"), default=-1)
 
 
@@ -123,7 +123,8 @@ def _after_fallback(content: list[BetaContentBlock]) -> list[BetaContentBlock]:
 
 
 def _text(response: BetaMessage) -> str:
-    return "".join(b.text for b in _after_fallback(response.content) if b.type == "text")
+    """All the text. On a stream, a fallback model continues the declined model's partial text."""
+    return "".join(b.text for b in response.content if b.type == "text")
 
 
 def _retry(
@@ -182,13 +183,8 @@ class TextDelta:
 
 
 @dataclass(frozen=True)
-class Reset:
-    """A server-side fallback switched models mid-output. Discard the text shown so far."""
-
-
-@dataclass(frozen=True)
 class Done[T]:
-    """The validated structured result, and the whole message without any declined part."""
+    """The validated structured result, and the whole message."""
 
     result: T
     text: str
@@ -202,6 +198,7 @@ _SUBMIT_INSTRUCTION = (
 
 
 def _tool_calls(response: BetaMessage) -> list[BetaContentBlock]:
+    """Tool calls after the last fallback. A declining model's calls are dropped on echo."""
     return [b for b in _after_fallback(response.content) if b.type == "tool_use"]
 
 
@@ -236,12 +233,12 @@ def _feedback(response: BetaMessage, error: Exception) -> BetaMessageParam:
 
 async def stream[T: BaseModel](
     system: str, messages: list[BetaMessageParam], output: type[T]
-) -> AsyncIterator[TextDelta | Reset | Done[T]]:
+) -> AsyncIterator[TextDelta | Done[T]]:
     """Streams the message to the user, then yields the validated `output` from a `submit` call.
 
-    An invalid submission is retried once with the errors. The retry's text isn't yielded.
-    LLMError can be raised after text was yielded, with no Reset first. Callers discard that
-    text.
+    A server-side fallback mid-output continues the text already yielded, so nothing is
+    retracted. An invalid submission is retried once with the errors. The retry's text isn't
+    yielded. LLMError can be raised after text was yielded. Callers discard that text.
     """
     system = f"{system}\n\n{_SUBMIT_INSTRUCTION}"
     tools = [
@@ -257,8 +254,6 @@ async def stream[T: BaseModel](
             async for event in events:
                 if event.type == "text":
                     yield TextDelta(event.text)
-                elif event.type == "content_block_start" and event.content_block.type == "fallback":
-                    yield Reset()
             response = await events.get_final_message()
     text = _text(_check(response))
     try:

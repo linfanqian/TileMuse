@@ -68,16 +68,17 @@ def test_complete_fails_after_second_invalid_reply(fake_llm, caplog):
     assert "Answer output failed validation twice" in caplog.text
 
 
-def test_complete_ignores_text_before_fallback(fake_llm):
+def test_complete_joins_text_across_a_fallback(fake_llm):
+    # On a stream, the fallback model continues the declined model's partial text.
     declined = SimpleNamespace(type="text", text='{"word": "he')
-    fake_llm.reply('{"word": "hello"}', before_fallback=[declined])
+    fake_llm.reply('llo"}', before_fallback=[declined])
     assert complete() == Answer(word="hello")
     assert len(fake_llm.requests) == 1
 
 
 def test_retry_echo_drops_blocks_before_fallback(fake_llm):
-    declined = [SimpleNamespace(type="thinking"), SimpleNamespace(type="text", text='{"wo')]
-    fake_llm.reply('{"word": "hi"}', before_fallback=declined)
+    declined = [SimpleNamespace(type="thinking"), SimpleNamespace(type="text", text='{"word": ')]
+    fake_llm.reply('"hi"}', before_fallback=declined)
     fake_llm.reply('{"word": "hello"}')
     assert complete() == Answer(word="hello")
     *_, assistant, _feedback = fake_llm.requests[1]["messages"]
@@ -185,16 +186,26 @@ def test_stream_yields_text_then_done(fake_llm):
     assert request["system"].startswith(SYSTEM)
 
 
-def test_stream_resets_on_fallback(fake_llm):
-    declined = SimpleNamespace(type="text", text="Partial")
-    fake_llm.reply("Hello.", submit={"word": "hello"}, before_fallback=[declined])
+def test_stream_continues_across_a_fallback(fake_llm):
+    # Nothing already streamed is invalidated; the fallback model continues the text.
+    declined = SimpleNamespace(type="text", text="Hel")
+    fake_llm.reply("lo.", submit={"word": "hello"}, before_fallback=[declined])
     events = stream_events()
     assert events == [
-        llm.TextDelta("Partial"),
-        llm.Reset(),
-        llm.TextDelta("Hello."),
+        llm.TextDelta("Hel"),
+        llm.TextDelta("lo."),
         llm.Done(Answer(word="hello"), "Hello."),
     ]
+
+
+def test_stream_ignores_a_submit_before_a_fallback(fake_llm):
+    declined = SimpleNamespace(type="tool_use", id="toolu_x", name="submit", input={"word": "hey"})
+    fake_llm.reply("Hello.", before_fallback=[declined])
+    fake_llm.reply(submit={"word": "hello"})
+    assert stream_events()[-1] == llm.Done(Answer(word="hello"), "Hello.")
+    *_, assistant, feedback = fake_llm.requests[1]["messages"]
+    assert [block.type for block in assistant["content"]] == ["fallback", "text"]
+    assert "submit" in feedback["content"]
 
 
 def test_stream_retries_invalid_submission_with_tool_result(fake_llm):
