@@ -39,9 +39,15 @@ class FakeStream:
             yield SimpleNamespace(type="content_block_start", content_block=block)
             if block.type == "text":
                 yield SimpleNamespace(type="text", text=block.text)
+        self._raise_midway()
 
     async def get_final_message(self) -> SimpleNamespace:
+        self._raise_midway()
         return self._reply
+
+    def _raise_midway(self) -> None:
+        if (error := getattr(self._reply, "error", None)) is not None:
+            raise error
 
 
 class FakeLLM:
@@ -72,8 +78,13 @@ class FakeLLM:
             stop_reason = "tool_use" if submit is not None else "end_turn"
         self._replies.append(SimpleNamespace(stop_reason=stop_reason, content=content))
 
-    def fail(self, error: Exception) -> None:
-        self._replies.append(error)
+    def fail(self, error: Exception, *, midway: bool = False) -> None:
+        """Scripts a failure on connecting, or, with `midway`, after some text has streamed."""
+        if midway:
+            text = SimpleNamespace(type="text", text="Hel")
+            self._replies.append(SimpleNamespace(content=[text], error=error))
+        else:
+            self._replies.append(error)
 
     def client(self, **kwargs: Any) -> SimpleNamespace:
         self.client_kwargs = kwargs

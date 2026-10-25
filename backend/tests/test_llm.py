@@ -110,6 +110,20 @@ def test_wraps_api_errors(fake_llm, error):
     assert len(fake_llm.requests) == 1
 
 
+MIDWAY_ERRORS = [httpx2.ReadTimeout("timed out"), httpx2.RemoteProtocolError("peer closed")]
+
+
+@pytest.mark.parametrize("error", MIDWAY_ERRORS)
+def test_wraps_network_errors_mid_reply(fake_llm, caplog, error):
+    # The SDK wraps network errors only until the reply starts streaming.
+    fake_llm.fail(error, midway=True)
+    with pytest.raises(llm.LLMError) as excinfo:
+        complete()
+    assert excinfo.value.__cause__ is error
+    assert len(fake_llm.requests) == 1
+    assert type(error).__name__ in caplog.text
+
+
 def test_logs_api_errors_without_the_key(fake_llm, caplog):
     fake_llm.fail(status_error(anthropic.BadRequestError, 400, "fallbacks: unknown field"))
     with pytest.raises(llm.LLMError):
@@ -221,6 +235,21 @@ def test_stream_wraps_api_errors(fake_llm):
     with pytest.raises(llm.LLMError) as excinfo:
         stream_events()
     assert excinfo.value.__cause__ is error
+
+
+@pytest.mark.parametrize("error", MIDWAY_ERRORS)
+def test_stream_wraps_network_errors_mid_reply(fake_llm, error):
+    fake_llm.fail(error, midway=True)
+    events = []
+
+    async def collect():
+        async for event in llm.stream(SYSTEM, MESSAGES, output=Answer):
+            events.append(event)
+
+    with pytest.raises(llm.LLMError) as excinfo:
+        asyncio.run(collect())
+    assert excinfo.value.__cause__ is error
+    assert events == [llm.TextDelta("Hel")]
 
 
 def test_stream_rejects_refusal(fake_llm):

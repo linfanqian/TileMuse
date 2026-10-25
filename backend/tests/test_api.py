@@ -51,6 +51,12 @@ def test_spec_returns_502_after_two_invalid_specs(fake_llm, make_spec):
     assert len(fake_llm.requests) == 2
 
 
+def test_spec_returns_502_when_the_connection_drops_mid_reply(fake_llm):
+    fake_llm.fail(httpx2.ReadTimeout("timed out"), midway=True)
+    res = client.post("/api/spec", json={"idea": "a small dungeon room"})
+    assert res.status_code == 502
+
+
 @pytest.mark.parametrize("idea", ["", "x" * 2001])
 def test_spec_rejects_bad_idea_length(fake_llm, idea):
     res = client.post("/api/spec", json={"idea": idea})

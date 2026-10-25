@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import anthropic
+import httpx2
 from anthropic.lib.streaming import BetaAsyncMessageStreamManager
 from anthropic.types.beta import (
     BetaContentBlock,
@@ -63,6 +64,9 @@ def _api_errors() -> Iterator[None]:
         raise LLMUnavailable("ANTHROPIC_API_KEY in backend/.env was rejected") from e
     except anthropic.APIError as e:  # Includes timeouts and connection errors.
         logger.warning("Claude request failed: %s", _describe(e))
+        raise LLMError(f"Claude request failed: {type(e).__name__}") from e
+    except httpx2.TransportError as e:  # The SDK passes these through once the reply streams.
+        logger.warning("Claude request failed mid-reply: %s: %s", type(e).__name__, e)
         raise LLMError(f"Claude request failed: {type(e).__name__}") from e
 
 
