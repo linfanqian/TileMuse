@@ -126,12 +126,18 @@ def _retry(
 ) -> list[BetaMessageParam]:
     """The conversation for a retry: the reply as an assistant turn, then the feedback.
 
-    Before a fallback, the API accepts only text back. An empty reply is left out, because
-    the API rejects an assistant turn with no content.
+    Before a fallback, the API accepts only text back. The API rejects empty text blocks and
+    an assistant turn with no content, so empty text is dropped, and a reply with nothing left
+    but `fallback` blocks (which aren't rendered into the prompt) is left out.
     """
     last = _last_fallback(response.content)
-    content = [b for i, b in enumerate(response.content) if i >= last or b.type == "text"]
-    echo: list[BetaMessageParam] = [{"role": "assistant", "content": content}] if content else []
+    content = [
+        b
+        for i, b in enumerate(response.content)
+        if (i >= last or b.type == "text") and not (b.type == "text" and not b.text)
+    ]
+    rendered = any(b.type != "fallback" for b in content)
+    echo: list[BetaMessageParam] = [{"role": "assistant", "content": content}] if rendered else []
     return [*messages, *echo, feedback]
 
 

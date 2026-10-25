@@ -269,6 +269,25 @@ def test_complete_retry_skips_an_empty_reply(fake_llm):
     assert feedback["role"] == "user"
 
 
+def test_retry_skips_a_reply_with_only_a_fallback_left(fake_llm):
+    # A fallback block isn't rendered into the prompt, so the turn would be empty.
+    fake_llm.reply(before_fallback=[SimpleNamespace(type="thinking")])
+    fake_llm.reply('{"word": "hello"}')
+    assert complete() == Answer(word="hello")
+    *history, feedback = fake_llm.requests[1]["messages"]
+    assert history == MESSAGES
+    assert feedback["role"] == "user"
+
+
+def test_retry_echo_drops_empty_text(fake_llm):
+    # The API rejects empty text blocks.
+    fake_llm.reply('{"word": "hi"}', before_fallback=[SimpleNamespace(type="text", text="")])
+    fake_llm.reply('{"word": "hello"}')
+    assert complete() == Answer(word="hello")
+    *_, assistant, _feedback = fake_llm.requests[1]["messages"]
+    assert [block.type for block in assistant["content"]] == ["fallback", "text"]
+
+
 def test_stream_retry_skips_an_empty_reply(fake_llm):
     fake_llm.reply("")
     fake_llm.reply(submit={"word": "hello"})
