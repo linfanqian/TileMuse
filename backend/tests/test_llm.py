@@ -153,7 +153,7 @@ def test_fixed_key_is_used_after_a_rejected_one(fake_llm, monkeypatch):
     assert fake_llm.client_kwargs["api_key"] == "fixed-key"
 
 
-@pytest.mark.parametrize("stop_reason", ["refusal", "max_tokens"])
+@pytest.mark.parametrize("stop_reason", ["refusal", "max_tokens", "model_context_window_exceeded"])
 def test_rejects_refusal_and_truncation(fake_llm, caplog, stop_reason):
     fake_llm.reply('{"word": "hello"}', stop_reason=stop_reason)
     with pytest.raises(llm.LLMError, match=stop_reason):

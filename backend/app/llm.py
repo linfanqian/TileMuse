@@ -94,7 +94,7 @@ def _stream(
 
 
 def _check(response: BetaMessage) -> BetaMessage:
-    if response.stop_reason in ("refusal", "max_tokens"):
+    if response.stop_reason in ("refusal", "max_tokens", "model_context_window_exceeded"):
         logger.warning("Claude returned no usable output: stop_reason=%s", response.stop_reason)
         raise LLMError(f"Claude returned no usable output (stop_reason={response.stop_reason})")
     return response
