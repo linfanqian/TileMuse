@@ -70,8 +70,9 @@ def _api_errors() -> Iterator[None]:
     except httpx2.RequestError as e:  # The SDK passes these through once the reply streams.
         logger.warning("Claude request failed mid-reply: %s: %s", type(e).__name__, e)
         raise LLMError(f"Claude request failed: {type(e).__name__}") from e
-    # The SDK can't parse streamed tool input. Callers build the request outside this block, so
-    # a config error isn't caught here (one thrown into stream() at a yield still would be).
+    # The SDK can't parse streamed tool input. Callers get the client outside this block, so a
+    # settings error isn't caught here. The SDK builds the request body inside it, and a
+    # ValueError thrown into stream() at a yield is also caught.
     except ValueError as e:
         logger.warning("Claude's reply couldn't be read: %s", e)
         raise LLMError("Claude's reply couldn't be read") from e
@@ -100,8 +101,12 @@ def _stream(
     )
 
 
+_FINISHED = ("end_turn", "tool_use", "stop_sequence")
+
+
 def _check(response: BetaMessage) -> BetaMessage:
-    if response.stop_reason in ("refusal", "max_tokens", "model_context_window_exceeded"):
+    # Anything else is a refusal, a truncation, or a stream that ended early (None).
+    if response.stop_reason not in _FINISHED:
         logger.warning("Claude returned no usable output: stop_reason=%s", response.stop_reason)
         raise LLMError(f"Claude returned no usable output (stop_reason={response.stop_reason})")
     return response
@@ -159,6 +164,25 @@ async def complete_text(system: str, messages: list[BetaMessageParam]) -> str:
     return _text(await _create(system, messages))
 
 
+def _parse[T: BaseModel](response: BetaMessage, output: type[T]) -> T:
+    """Validates the reply's JSON. Raises the ValidationError for the whole text.
+
+    The docs say a streamed fallback continues the partial text, but not whether that holds
+    with structured outputs. So after a fallback, the text after it alone is tried as well.
+    """
+    try:
+        return output.model_validate_json(_text(response))
+    except ValidationError as e:
+        if _last_fallback(response.content) < 0:
+            raise
+        error = e
+    restarted = "".join(b.text for b in _after_fallback(response.content) if b.type == "text")
+    try:
+        return output.model_validate_json(restarted)
+    except ValidationError:
+        raise error from None
+
+
 async def complete[T: BaseModel](
     system: str, messages: list[BetaMessageParam], output: type[T]
 ) -> T:
@@ -168,7 +192,7 @@ async def complete[T: BaseModel](
     }
     response = await _create(system, messages, output_config=output_config)
     try:
-        return output.model_validate_json(_text(response))
+        return _parse(response, output)
     except ValidationError as e:
         feedback: BetaMessageParam = {
             "role": "user",
@@ -177,7 +201,7 @@ async def complete[T: BaseModel](
         messages = _retry(messages, response, feedback)
     response = await _create(system, messages, output_config=output_config)
     try:
-        return output.model_validate_json(_text(response))
+        return _parse(response, output)
     except ValidationError as e:
         logger.warning("Claude's %s output failed validation twice: %s", output.__name__, e)
         raise LLMError("Claude's output failed validation twice") from e

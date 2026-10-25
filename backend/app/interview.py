@@ -3,7 +3,8 @@
 from app.llm import complete
 from app.spec import MapSpec
 
-# The JSON schema carries field names and enums; this states the checks in spec.py.
+# The JSON schema carries field names and enums; this states the checks in spec.py. The
+# player_spawn/exit line is a design requirement that nothing checks yet.
 SYSTEM = """\
 You turn a rough idea for a top-down 2D game map into a design spec for one walled room.
 Fill every field from the idea. Where the idea says nothing, choose values that fit its theme \

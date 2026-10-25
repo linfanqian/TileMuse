@@ -76,6 +76,14 @@ def test_complete_joins_text_across_a_fallback(fake_llm):
     assert len(fake_llm.requests) == 1
 
 
+def test_complete_accepts_a_fallback_that_restarts_the_json(fake_llm):
+    # The docs don't say whether structured outputs continue or restart after a fallback.
+    declined = SimpleNamespace(type="text", text='{"word": "he')
+    fake_llm.reply('{"word": "hello"}', before_fallback=[declined])
+    assert complete() == Answer(word="hello")
+    assert len(fake_llm.requests) == 1
+
+
 def test_retry_echo_drops_blocks_before_fallback(fake_llm):
     declined = [SimpleNamespace(type="thinking"), SimpleNamespace(type="text", text='{"word": ')]
     fake_llm.reply('"hi"}', before_fallback=declined)
@@ -187,7 +195,17 @@ def test_fixed_key_is_used_after_a_rejected_one(fake_llm, monkeypatch):
     assert fake_llm.client_kwargs["api_key"] == "fixed-key"
 
 
-@pytest.mark.parametrize("stop_reason", ["refusal", "max_tokens", "model_context_window_exceeded"])
+def test_rejects_a_stream_that_ended_early(fake_llm):
+    # Without a message_delta, the final message has no stop_reason.
+    fake_llm.reply(submit={"word": "hel"})
+    fake_llm._replies[-1].stop_reason = None
+    with pytest.raises(llm.LLMError, match="stop_reason=None"):
+        stream_events()
+
+
+@pytest.mark.parametrize(
+    "stop_reason", ["refusal", "max_tokens", "model_context_window_exceeded", "pause_turn"]
+)
 def test_rejects_refusal_and_truncation(fake_llm, caplog, stop_reason):
     fake_llm.reply('{"word": "hello"}', stop_reason=stop_reason)
     with pytest.raises(llm.LLMError, match=stop_reason):
