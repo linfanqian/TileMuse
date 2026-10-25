@@ -70,7 +70,9 @@ def _api_errors() -> Iterator[None]:
     except httpx2.RequestError as e:  # The SDK passes these through once the reply streams.
         logger.warning("Claude request failed mid-reply: %s: %s", type(e).__name__, e)
         raise LLMError(f"Claude request failed: {type(e).__name__}") from e
-    except ValueError as e:  # The SDK can't parse streamed tool input.
+    # The SDK can't parse streamed tool input. Callers build the request outside this block, so
+    # a config error isn't caught here (one thrown into stream() at a yield still would be).
+    except ValueError as e:
         logger.warning("Claude's reply couldn't be read: %s", e)
         raise LLMError("Claude's reply couldn't be read") from e
 
@@ -106,9 +108,14 @@ def _check(response: BetaMessage) -> BetaMessage:
 
 
 async def _create(system: str, messages: list[BetaMessageParam], **params: Any) -> BetaMessage:
-    """Sends one request and waits for the whole reply. Raises LLMError on any failure."""
+    """Sends one request and waits for the whole reply.
+
+    Raises LLMUnavailable without a working key, and LLMError on API and network errors,
+    an unreadable reply, a refusal or truncation.
+    """
+    request = _stream(system, messages, **params)
     with _api_errors():
-        async with _stream(system, messages, **params) as events:
+        async with request as events:
             response = await events.get_final_message()
     return _check(response)
 
@@ -132,15 +139,16 @@ def _retry(
 ) -> list[BetaMessageParam]:
     """The conversation for a retry: the reply as an assistant turn, then the feedback.
 
-    Before a fallback, the API accepts only text back. The API rejects whitespace-only text
-    blocks and an assistant turn with no content, so such text is dropped, and a reply with
-    nothing left but `fallback` blocks (which aren't rendered into the prompt) is left out.
+    Before the last fallback, the API accepts only text and `fallback` blocks back, and every
+    `fallback` block stays where it appeared. The API rejects whitespace-only text blocks and
+    an assistant turn with no content, so such text is dropped, and a reply with nothing left
+    but `fallback` blocks (which aren't rendered into the prompt) is left out.
     """
     last = _last_fallback(response.content)
     content = [
         b
         for i, b in enumerate(response.content)
-        if (b.text.strip() if b.type == "text" else i >= last)
+        if (b.text.strip() if b.type == "text" else b.type == "fallback" or i >= last)
     ]
     rendered = any(b.type != "fallback" for b in content)
     echo: list[BetaMessageParam] = [{"role": "assistant", "content": content}] if rendered else []
@@ -203,11 +211,15 @@ def _tool_calls(response: BetaMessage) -> list[BetaContentBlock]:
 
 
 def _submission[T: BaseModel](response: BetaMessage, output: type[T]) -> T:
-    """The validated `submit` input. Raises ValidationError, or LookupError if it's missing."""
+    """The first valid `submit` input. Raises ValidationError, or LookupError if it's missing."""
+    error: Exception = LookupError(f"The {SUBMIT} tool wasn't called")
     for call in _tool_calls(response):
         if call.name == SUBMIT:
-            return output.model_validate(call.input)
-    raise LookupError(f"The {SUBMIT} tool wasn't called")
+            try:
+                return output.model_validate(call.input)
+            except ValidationError as e:
+                error = e
+    raise error
 
 
 def _feedback(response: BetaMessage, error: Exception) -> BetaMessageParam:
@@ -239,6 +251,8 @@ async def stream[T: BaseModel](
     A server-side fallback mid-output continues the text already yielded, so nothing is
     retracted. An invalid submission is retried once with the errors. The retry's text isn't
     yielded. LLMError can be raised after text was yielded. Callers discard that text.
+    The HTTP stream stays open while the generator is suspended, so a caller that may stop
+    early wraps it in `contextlib.aclosing`.
     """
     system = f"{system}\n\n{_SUBMIT_INSTRUCTION}"
     tools = [
@@ -249,8 +263,9 @@ async def stream[T: BaseModel](
             "strict": True,
         }
     ]
+    request = _stream(system, messages, tools=tools)
     with _api_errors():
-        async with _stream(system, messages, tools=tools) as events:
+        async with request as events:
             async for event in events:
                 if event.type == "text":
                     yield TextDelta(event.text)

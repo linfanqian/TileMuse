@@ -64,17 +64,18 @@ class FakeLLM:
         self,
         text: str = "",
         *,
-        submit: dict[str, Any] | None = None,
+        submit: dict[str, Any] | list[dict[str, Any]] | None = None,
         before_fallback: Sequence[SimpleNamespace] = (),
         stop_reason: str | None = None,
     ) -> None:
-        """Scripts one reply: declined blocks and a `fallback` block, text, a submit call."""
+        """Scripts one reply: declined blocks and a `fallback` block, text, submit calls."""
         content = [*before_fallback, SimpleNamespace(type="fallback")] if before_fallback else []
         if text:
             content.append(SimpleNamespace(type="text", text=text))
-        if submit is not None:
-            call_id = f"toolu_{len(self._replies)}"
-            call = SimpleNamespace(type="tool_use", id=call_id, name="submit", input=submit)
+        submits = [submit] if isinstance(submit, dict) else submit or []
+        for n, args in enumerate(submits):
+            call_id = f"toolu_{len(self._replies)}_{n}"
+            call = SimpleNamespace(type="tool_use", id=call_id, name="submit", input=args)
             content.append(call)
         if stop_reason is None:
             stop_reason = "tool_use" if submit is not None else "end_turn"

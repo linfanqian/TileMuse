@@ -85,6 +85,35 @@ def test_retry_echo_drops_blocks_before_fallback(fake_llm):
     assert [block.type for block in assistant["content"]] == ["text", "fallback", "text"]
 
 
+def test_retry_echo_keeps_every_fallback_block(fake_llm):
+    # Two hops: the API validates thinking around each fallback block by its position.
+    declined = [
+        SimpleNamespace(type="text", text='{"word": '),
+        SimpleNamespace(type="fallback"),
+        SimpleNamespace(type="thinking"),
+    ]
+    fake_llm.reply('"hi"}', before_fallback=declined)
+    fake_llm.reply('{"word": "hello"}')
+    assert complete() == Answer(word="hello")
+    *_, assistant, _feedback = fake_llm.requests[1]["messages"]
+    assert [block.type for block in assistant["content"]] == [
+        "text",
+        "fallback",
+        "fallback",
+        "text",
+    ]
+
+
+def test_config_errors_are_not_reported_as_llm_errors(monkeypatch):
+    # A ValueError from settings is a local bug, not an unreadable reply.
+    def broken_settings():
+        raise ValueError("bad config")
+
+    monkeypatch.setattr(llm, "_Settings", broken_settings)
+    with pytest.raises(ValueError, match="bad config"):
+        complete()
+
+
 def test_complete_text_returns_text(fake_llm):
     fake_llm.reply("Hello.")
     assert asyncio.run(llm.complete_text(SYSTEM, MESSAGES)) == "Hello."
@@ -223,6 +252,12 @@ def test_stream_retries_invalid_submission_with_tool_result(fake_llm):
     assert (result["tool_use_id"], result["is_error"]) == (call_id, True)
     assert "at least 3 characters" in result["content"]
     assert second["tools"] == first["tools"]
+
+
+def test_stream_uses_the_first_valid_submission(fake_llm):
+    fake_llm.reply("Hello.", submit=[{"word": "hi"}, {"word": "hello"}])
+    assert stream_events()[-1] == llm.Done(Answer(word="hello"), "Hello.")
+    assert len(fake_llm.requests) == 1
 
 
 def test_stream_asks_for_submit_when_missing(fake_llm):
