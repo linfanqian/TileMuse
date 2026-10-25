@@ -47,7 +47,7 @@ class _Settings(BaseSettings):
 def _client() -> anthropic.AsyncAnthropic:
     key = _Settings().anthropic_api_key
     if key is None or not key.get_secret_value():
-        raise LLMUnavailable("ANTHROPIC_API_KEY is not set in backend/.env")
+        raise LLMUnavailable("ANTHROPIC_API_KEY is not set in backend/.env or the environment")
     return anthropic.AsyncAnthropic(
         api_key=key.get_secret_value(), timeout=TIMEOUT_SECONDS, max_retries=SDK_RETRIES
     )
@@ -61,13 +61,18 @@ def _api_errors() -> Iterator[None]:
     except anthropic.AuthenticationError as e:
         logger.warning("Claude rejected the API key: %s", _describe(e))
         _client.cache_clear()  # Pick up a fixed backend/.env without a restart.
-        raise LLMUnavailable("ANTHROPIC_API_KEY in backend/.env was rejected") from e
+        raise LLMUnavailable(
+            "ANTHROPIC_API_KEY (from backend/.env or the environment) was rejected"
+        ) from e
     except anthropic.APIError as e:  # Includes timeouts and connection errors.
         logger.warning("Claude request failed: %s", _describe(e))
         raise LLMError(f"Claude request failed: {type(e).__name__}") from e
     except httpx2.RequestError as e:  # The SDK passes these through once the reply streams.
         logger.warning("Claude request failed mid-reply: %s: %s", type(e).__name__, e)
         raise LLMError(f"Claude request failed: {type(e).__name__}") from e
+    except ValueError as e:  # The SDK can't parse streamed tool input.
+        logger.warning("Claude's reply couldn't be read: %s", e)
+        raise LLMError("Claude's reply couldn't be read") from e
 
 
 def _describe(e: anthropic.APIError) -> str:

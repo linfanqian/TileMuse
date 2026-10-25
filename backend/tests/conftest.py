@@ -1,8 +1,10 @@
+import inspect
 from collections.abc import AsyncIterator, Callable, Iterator, Sequence
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from anthropic.resources.beta.messages import AsyncMessages
 
 from app import llm
 from app.spec import MapSpec
@@ -91,6 +93,8 @@ class FakeLLM:
         return SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(stream=self._stream)))
 
     def _stream(self, **kwargs: Any) -> FakeStream:
+        # Fails on a parameter the real SDK method doesn't take.
+        inspect.signature(AsyncMessages.stream).bind(None, **kwargs)
         self.requests.append(kwargs)
         return FakeStream(self._replies.pop(0))
 

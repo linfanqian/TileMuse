@@ -256,6 +256,15 @@ def test_stream_wraps_network_errors_mid_reply(fake_llm, error):
     assert events == [llm.TextDelta("Hel")]
 
 
+def test_stream_wraps_unparsable_tool_input(fake_llm, caplog):
+    error = ValueError("Unable to parse tool parameter JSON from model.")
+    fake_llm.fail(error, midway=True)
+    with pytest.raises(llm.LLMError) as excinfo:
+        stream_events()
+    assert excinfo.value.__cause__ is error
+    assert "Unable to parse tool parameter JSON" in caplog.text
+
+
 def test_stream_rejects_refusal(fake_llm):
     fake_llm.reply("Hel", stop_reason="refusal")
     with pytest.raises(llm.LLMError, match="refusal"):
