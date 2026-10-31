@@ -11,7 +11,7 @@ from typing import Annotated, Literal, Self
 from anthropic.types.beta import BetaMessageParam
 from pydantic import BaseModel, Field, StringConstraints, ValidationError, model_validator
 
-from app.llm import Done, TextDelta, complete, stream
+from app.llm import Done, LLMError, TextDelta, complete, stream
 from app.spec import MapSpec, SpecDraft, SpecField
 
 # The JSON schema carries field names and enums; this states the checks in spec.py. The
@@ -56,10 +56,16 @@ async def idea_to_spec(idea: str) -> MapSpec:
     return await complete(SYSTEM, [{"role": "user", "content": idea}], output=MapSpec)
 
 
+# Characters per chat message. Bounds the LLM's token cost, with the API's cap on the number of
+# messages. Applies to both roles, so `interview` keeps its own messages within it.
+MAX_MESSAGE = 2000
+
+
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
-    # Bounds the LLM's token cost, with the API's cap on the number of messages.
-    content: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
+    content: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE)
+    ]
 
 
 class Question(BaseModel):
@@ -94,7 +100,9 @@ class _Turn(BaseModel):
 
 
 class InterviewResult(BaseModel):
-    message: str  # The whole message to the user, streamed before this as TextDelta pieces.
+    # The whole message to the user. The client shows it in place of the streamed text, which
+    # it differs from when Claude wrote none.
+    message: str
     question: Question | None  # None once Claude has nothing left to ask.
     draft: SpecDraft
     spec: MapSpec | None  # Set exactly when every draft field is set; the draft is then valid.
@@ -115,10 +123,19 @@ async def interview(
             if isinstance(event, Done):
                 turn = event.result
                 yield InterviewResult(
-                    message=event.text,
+                    message=_message(event.text, turn.question),
                     question=turn.question,
                     draft=turn.draft,
                     spec=turn.draft.to_spec(),
                 )
             else:
                 yield event
+
+
+def _message(text: str, question: Question | None) -> str:
+    """Claude's message, valid as the next turn's history. A fallback if Claude wrote none."""
+    if len(text) > MAX_MESSAGE:
+        raise LLMError(f"Claude's message is over {MAX_MESSAGE} characters")
+    if text.strip():
+        return text
+    return f"What should the {question.field} be?" if question else "The spec is ready."

@@ -2,9 +2,11 @@ import asyncio
 import json
 
 import anthropic
+import pytest
 
 from app.interview import (
     INTERVIEW_SYSTEM,
+    MAX_MESSAGE,
     SYSTEM,
     ChatMessage,
     InterviewResult,
@@ -12,7 +14,7 @@ from app.interview import (
     idea_to_spec,
     interview,
 )
-from app.llm import TextDelta
+from app.llm import LLMError, TextDelta
 from app.spec import MapSpec, SpecDraft
 
 
@@ -116,3 +118,21 @@ def test_interview_rejects_a_question_without_enough_suggestions(fake_llm):
     fake_llm.reply(submit={"draft": {}, "question": QUESTION})
     *_, result = run_interview()
     assert len(result.question.suggestions) == 3
+
+
+@pytest.mark.parametrize(
+    ("question", "message"), [(QUESTION, "What should the width be?"), (None, "The spec is ready.")]
+)
+def test_interview_falls_back_when_claude_writes_no_message(fake_llm, make_spec, question, message):
+    draft = make_spec().model_dump() if question is None else {}
+    fake_llm.reply(submit={"draft": draft, "question": question})
+    (result,) = run_interview()
+    assert result.message == message
+    # The message must be valid history for the next turn.
+    ChatMessage(role="assistant", content=result.message)
+
+
+def test_interview_fails_on_a_message_too_long_for_the_next_turn(fake_llm):
+    fake_llm.reply("x" * (MAX_MESSAGE + 1), submit={"draft": {}, "question": QUESTION})
+    with pytest.raises(LLMError, match="characters"):
+        run_interview()
