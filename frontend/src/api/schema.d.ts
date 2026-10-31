@@ -38,6 +38,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/interview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Interview Turn
+         * @description Streams JSON Lines: text events, then done. The status is sent before Claude replies,
+         *     so LLM failures arrive as an error event instead of a 502 or 503.
+         */
+        post: operations["interview_turn_api_interview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/generate": {
         parameters: {
             query?: never;
@@ -93,6 +114,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ChatMessage */
+        ChatMessage: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /** Content */
+            content: string;
+        };
         /** Explanation */
         Explanation: {
             /** Code */
@@ -136,6 +167,54 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** InterviewDone */
+        InterviewDone: {
+            /** Message */
+            message: string;
+            question: components["schemas"]["Question"] | null;
+            draft: components["schemas"]["SpecDraft"];
+            spec: components["schemas"]["MapSpec"] | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "done";
+        };
+        /**
+         * InterviewError
+         * @description The turn failed. The client discards any text streamed before it.
+         */
+        InterviewError: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "error";
+            /** Message */
+            message: string;
+        };
+        /**
+         * InterviewRequest
+         * @description The whole chat so far, which the frontend keeps, and the draft from the last turn.
+         */
+        InterviewRequest: {
+            /** Messages */
+            messages: components["schemas"]["ChatMessage"][];
+            draft?: components["schemas"]["SpecDraft"];
+        };
+        /**
+         * InterviewText
+         * @description The next piece of the message to the user.
+         */
+        InterviewText: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "text";
+            /** Text */
+            text: string;
         };
         /** MapObject */
         MapObject: {
@@ -215,6 +294,40 @@ export interface components {
             kind: components["schemas"]["ObjectKind"];
             /** Count */
             count: number;
+        };
+        /** Question */
+        Question: {
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "theme" | "mood" | "width" | "height" | "doors" | "objects" | "rules";
+            /** Reason */
+            reason: string;
+            /** Suggestions */
+            suggestions: string[];
+        };
+        /**
+         * SpecDraft
+         * @description A MapSpec being filled in by the interview. None means not decided yet.
+         *
+         *     Each field is checked on its own. Whether the fields fit together is checked by `to_spec`.
+         */
+        SpecDraft: {
+            /** Theme */
+            theme?: string | null;
+            /** Mood */
+            mood?: string | null;
+            /** Width */
+            width?: number | null;
+            /** Height */
+            height?: number | null;
+            /** Doors */
+            doors?: number | null;
+            /** Objects */
+            objects?: components["schemas"]["ObjectRequirement"][] | null;
+            /** Rules */
+            rules?: (components["schemas"]["MaxDensityRule"] | components["schemas"]["MinDistanceRule"])[] | null;
         };
         /** SpecRequest */
         SpecRequest: {
@@ -318,6 +431,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MapSpec"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    interview_turn_api_interview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InterviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/jsonl": unknown;
                 };
             };
             /** @description Validation Error */

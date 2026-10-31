@@ -126,3 +126,63 @@ def test_generate_rejects_invalid_spec(make_spec):
     spec["objects"] = [{"kind": "dragon", "count": 1}]
     res = client.post("/api/generate", json={"spec": spec, "seed": 1})
     assert res.status_code == 422
+
+
+IDEA = {"role": "user", "content": "a creepy library where the player sneaks past guards"}
+QUESTION = {"field": "mood", "reason": "Mood sets the lighting.", "suggestions": ["creepy", "calm"]}
+
+
+def interview_events(body):
+    res = client.post("/api/interview", json=body)
+    assert res.status_code == 200
+    assert res.headers["content-type"].startswith("application/jsonl")
+    return [json.loads(line) for line in res.text.splitlines()]
+
+
+def test_interview_streams_text_then_done(fake_llm):
+    draft = {"theme": "abandoned library"}
+    fake_llm.reply("What mood?", submit={"draft": draft, "question": QUESTION})
+    text, done = interview_events({"messages": [IDEA]})
+    assert text == {"type": "text", "text": "What mood?"}
+    assert done["type"] == "done"
+    assert (done["message"], done["question"], done["spec"]) == ("What mood?", QUESTION, None)
+    assert done["draft"]["theme"] == "abandoned library"
+
+
+def test_interview_done_carries_the_spec(fake_llm, make_spec):
+    spec = make_spec()
+    fake_llm.reply("Ready.", submit={"draft": spec.model_dump(), "question": None})
+    *_, done = interview_events({"messages": [IDEA], "draft": {"theme": "dungeon"}})
+    assert MapSpec.model_validate(done["spec"]) == spec
+
+
+def test_interview_reports_a_missing_key_as_an_error_event(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    (error,) = interview_events({"messages": [IDEA]})
+    assert error["type"] == "error"
+    assert "ANTHROPIC_API_KEY is not set" in error["message"]
+
+
+def test_interview_reports_a_failure_mid_reply_after_the_text(fake_llm):
+    fake_llm.fail(httpx2.ReadTimeout("timed out"), midway=True)
+    text, error = interview_events({"messages": [IDEA]})
+    assert text == {"type": "text", "text": "Hel"}
+    assert error["type"] == "error"
+
+
+@pytest.mark.parametrize(
+    "messages",
+    [
+        [],
+        [{"role": "assistant", "content": "Hi!"}, IDEA],
+        [IDEA, IDEA],
+        [IDEA, {"role": "assistant", "content": "What mood?"}],
+        [{"role": "user", "content": "   "}],
+        [{"role": "user", "content": "x" * 2001}],
+        [IDEA, {"role": "assistant", "content": "?"}] * 20 + [IDEA],
+    ],
+)
+def test_interview_rejects_bad_history(fake_llm, messages):
+    res = client.post("/api/interview", json={"messages": messages})
+    assert res.status_code == 422
+    assert fake_llm.requests == []
