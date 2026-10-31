@@ -6,7 +6,7 @@ validator's job.
 
 from collections import Counter
 from enum import StrEnum
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -28,13 +28,19 @@ class ObjectRequirement(BaseModel):
     count: int = Field(ge=1, le=64)
 
 
+def _rule_type(name: str) -> Any:
+    """A required `type` tag. Pydantic emits a one-value Literal as `const`, which the schema
+    sent to Claude drops to a description, so `enum` is added to keep the value constrained."""
+    return Field(json_schema_extra={"enum": [name]})
+
+
 class MaxDensityRule(BaseModel):
     """`objects / interior` may be at most `max`.
 
     `interior` is the (width - 2) * (height - 2) tiles inside the outer walls, whatever is on them.
     """
 
-    type: Literal["max_density"] = "max_density"
+    type: Literal["max_density"] = _rule_type("max_density")
     max: float = Field(gt=0, le=1)
 
 
@@ -44,7 +50,7 @@ class MinDistanceRule(BaseModel):
     Distance is Manhattan. With `a == b`, this spaces out objects of that kind.
     """
 
-    type: Literal["min_distance"] = "min_distance"
+    type: Literal["min_distance"] = _rule_type("min_distance")
     a: ObjectKind
     b: ObjectKind
     tiles: int = Field(ge=1, le=256)
