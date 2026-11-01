@@ -197,6 +197,8 @@ export interface components {
         /**
          * InterviewRequest
          * @description The whole chat so far, which the frontend keeps, and the draft from the last turn.
+         *
+         *     At the message cap the frontend drops the oldest question and answer after the first idea.
          */
         InterviewRequest: {
             /** Messages */

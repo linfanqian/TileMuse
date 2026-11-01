@@ -12,7 +12,16 @@ from anthropic.types.beta import BetaMessageParam
 from pydantic import BaseModel, Field, StringConstraints, ValidationError, model_validator
 
 from app.llm import Done, LLMError, TextDelta, complete, stream
-from app.spec import MapSpec, SpecDraft, SpecField
+from app.spec import (
+    Doors,
+    Label,
+    LayoutRule,
+    MapSpec,
+    ObjectRequirement,
+    Size,
+    SpecDraft,
+    SpecField,
+)
 
 # The JSON schema carries field names and enums; this states the checks in spec.py. The
 # player_spawn/exit line is a design requirement that nothing checks yet.
@@ -76,10 +85,23 @@ class Question(BaseModel):
     )
 
 
+class _SubmittedDraft(SpecDraft):
+    """SpecDraft with every key required, so Claude restates each field instead of dropping one
+    it didn't touch this turn. Null still means not decided yet."""
+
+    theme: Label | None
+    mood: Label | None
+    width: Size | None
+    height: Size | None
+    doors: Doors | None
+    objects: list[ObjectRequirement] | None
+    rules: list[LayoutRule] | None
+
+
 class _Turn(BaseModel):
     """What Claude submits each turn. The backend, not Claude, decides when the spec is ready."""
 
-    draft: SpecDraft
+    draft: _SubmittedDraft
     question: Question | None
 
     @model_validator(mode="after")
@@ -122,11 +144,12 @@ async def interview(
         async for event in events:
             if isinstance(event, Done):
                 turn = event.result
+                draft = SpecDraft(**dict(turn.draft))  # Not the subclass, for callers.
                 yield InterviewResult(
                     message=_message(event.text, turn.question),
                     question=turn.question,
-                    draft=turn.draft,
-                    spec=turn.draft.to_spec(),
+                    draft=draft,
+                    spec=draft.to_spec(),
                 )
             else:
                 yield event
@@ -134,8 +157,9 @@ async def interview(
 
 def _message(text: str, question: Question | None) -> str:
     """Claude's message, valid as the next turn's history. A fallback if Claude wrote none."""
+    text = text.strip()  # As ChatMessage stores it.
     if len(text) > MAX_MESSAGE:
         raise LLMError(f"Claude's message is over {MAX_MESSAGE} characters")
-    if text.strip():
+    if text:
         return text
     return f"What should the {question.field} be?" if question else "The spec is ready."

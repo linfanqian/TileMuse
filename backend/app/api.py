@@ -25,10 +25,17 @@ class SpecRequest(BaseModel):
     idea: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
 
 
-class InterviewRequest(BaseModel):
-    """The whole chat so far, which the frontend keeps, and the draft from the last turn."""
+MAX_MESSAGES = 39
 
-    messages: list[ChatMessage] = Field(min_length=1, max_length=40)
+
+class InterviewRequest(BaseModel):
+    """The whole chat so far, which the frontend keeps, and the draft from the last turn.
+
+    At the message cap the frontend drops the oldest question and answer after the first idea.
+    """
+
+    # Odd, since turns alternate and both start and end with the user.
+    messages: list[ChatMessage] = Field(min_length=1, max_length=MAX_MESSAGES)
     draft: SpecDraft = Field(default_factory=SpecDraft)
 
     @model_validator(mode="after")
@@ -127,7 +134,7 @@ async def interview_turn(req: InterviewRequest) -> AsyncIterable[InterviewEvent]
                 if isinstance(event, TextDelta):
                     yield InterviewText(text=event.text)
                 else:
-                    yield InterviewDone(**dict(event))
+                    yield InterviewDone.model_validate(event, from_attributes=True)
     except LLMUnavailable as e:
         yield InterviewError(message=str(e))
     except LLMError:

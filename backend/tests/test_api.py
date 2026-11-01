@@ -5,8 +5,9 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api import MAX_MESSAGES
 from app.main import app
-from app.spec import MapSpec
+from app.spec import MapSpec, SpecDraft
 
 client = TestClient(app)
 
@@ -140,7 +141,7 @@ def interview_events(body):
 
 
 def test_interview_streams_text_then_done(fake_llm):
-    draft = {"theme": "abandoned library"}
+    draft = SpecDraft(theme="abandoned library").model_dump()
     fake_llm.reply("What mood?", submit={"draft": draft, "question": QUESTION})
     text, done = interview_events({"messages": [IDEA]})
     assert text == {"type": "text", "text": "What mood?"}
@@ -179,10 +180,18 @@ def test_interview_reports_a_failure_mid_reply_after_the_text(fake_llm):
         [IDEA, {"role": "assistant", "content": "What mood?"}],
         [{"role": "user", "content": "   "}],
         [{"role": "user", "content": "x" * 2001}],
-        [IDEA, {"role": "assistant", "content": "?"}] * 20 + [IDEA],
+        [IDEA, {"role": "assistant", "content": "?"}] * (MAX_MESSAGES // 2 + 1) + [IDEA],
     ],
 )
 def test_interview_rejects_bad_history(fake_llm, messages):
     res = client.post("/api/interview", json={"messages": messages})
     assert res.status_code == 422
     assert fake_llm.requests == []
+
+
+def test_interview_accepts_history_at_the_cap(fake_llm):
+    fake_llm.reply("What mood?", submit={"draft": SpecDraft().model_dump(), "question": QUESTION})
+    messages = [IDEA, {"role": "assistant", "content": "?"}] * (MAX_MESSAGES // 2) + [IDEA]
+    assert len(messages) == MAX_MESSAGES
+    *_, done = interview_events({"messages": messages})
+    assert done["type"] == "done"

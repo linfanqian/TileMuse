@@ -1,5 +1,6 @@
 import asyncio
 import json
+from typing import get_args
 
 import anthropic
 import pytest
@@ -15,7 +16,7 @@ from app.interview import (
     interview,
 )
 from app.llm import LLMError, TextDelta
-from app.spec import MapSpec, SpecDraft
+from app.spec import MapSpec, SpecDraft, SpecField
 
 
 def test_idea_to_spec_returns_spec_from_llm(fake_llm, make_spec):
@@ -47,6 +48,9 @@ QUESTION = {
 }
 
 
+EMPTY = SpecDraft().model_dump()
+
+
 def run_interview(messages=IDEA, draft=None):
     async def collect():
         return [event async for event in interview(messages, draft or SpecDraft())]
@@ -55,7 +59,7 @@ def run_interview(messages=IDEA, draft=None):
 
 
 def test_interview_streams_question_then_result(fake_llm):
-    draft = {"theme": "abandoned library", "mood": "creepy"}
+    draft = SpecDraft(theme="abandoned library", mood="creepy").model_dump()
     fake_llm.reply("How big should the room be?", submit={"draft": draft, "question": QUESTION})
     *text, result = run_interview()
     assert text == [TextDelta("How big should the room be?")]
@@ -93,8 +97,9 @@ def test_interview_sends_history_and_draft(fake_llm):
 
 
 def test_interview_retries_a_finish_with_missing_fields(fake_llm):
-    fake_llm.reply("All done!", submit={"draft": {"theme": "library"}, "question": None})
-    fake_llm.reply(submit={"draft": {"theme": "library"}, "question": QUESTION})
+    draft = SpecDraft(theme="library").model_dump()
+    fake_llm.reply("All done!", submit={"draft": draft, "question": None})
+    fake_llm.reply(submit={"draft": draft, "question": QUESTION})
     *_, result = run_interview()
     assert result.question == Question.model_validate(QUESTION)
     feedback = fake_llm.requests[1]["messages"][-1]["content"][0]["content"]
@@ -114,8 +119,8 @@ def test_interview_retries_a_complete_draft_that_does_not_fit(fake_llm, make_spe
 
 def test_interview_rejects_a_question_without_enough_suggestions(fake_llm):
     one = {**QUESTION, "suggestions": ["Small"]}
-    fake_llm.reply("How big?", submit={"draft": {}, "question": one})
-    fake_llm.reply(submit={"draft": {}, "question": QUESTION})
+    fake_llm.reply("How big?", submit={"draft": EMPTY, "question": one})
+    fake_llm.reply(submit={"draft": EMPTY, "question": QUESTION})
     *_, result = run_interview()
     assert len(result.question.suggestions) == 3
 
@@ -124,7 +129,7 @@ def test_interview_rejects_a_question_without_enough_suggestions(fake_llm):
     ("question", "message"), [(QUESTION, "What should the width be?"), (None, "The spec is ready.")]
 )
 def test_interview_falls_back_when_claude_writes_no_message(fake_llm, make_spec, question, message):
-    draft = make_spec().model_dump() if question is None else {}
+    draft = make_spec().model_dump() if question is None else EMPTY
     fake_llm.reply(submit={"draft": draft, "question": question})
     (result,) = run_interview()
     assert result.message == message
@@ -133,6 +138,33 @@ def test_interview_falls_back_when_claude_writes_no_message(fake_llm, make_spec,
 
 
 def test_interview_fails_on_a_message_too_long_for_the_next_turn(fake_llm):
-    fake_llm.reply("x" * (MAX_MESSAGE + 1), submit={"draft": {}, "question": QUESTION})
+    fake_llm.reply("x" * (MAX_MESSAGE + 1), submit={"draft": EMPTY, "question": QUESTION})
     with pytest.raises(LLMError, match="characters"):
         run_interview()
+
+
+def test_interview_retries_a_draft_that_drops_a_field(fake_llm):
+    # Claude must restate every field, so one it didn't touch can't silently reset to null.
+    draft = SpecDraft(theme="abandoned library", mood="creepy")
+    dropped = {"theme": "abandoned library", **dict.fromkeys(["width", "height"], None)}
+    fake_llm.reply("How big?", submit={"draft": dropped, "question": QUESTION})
+    fake_llm.reply(submit={"draft": draft.model_dump(), "question": QUESTION})
+    *_, result = run_interview(draft=draft)
+    assert result.draft == draft
+    feedback = fake_llm.requests[1]["messages"][-1]["content"][0]["content"]
+    assert "mood" in feedback
+
+
+def test_submitted_draft_schema_requires_every_field(fake_llm):
+    fake_llm.reply("How big?", submit={"draft": EMPTY, "question": QUESTION})
+    run_interview()
+    (tool,) = fake_llm.requests[0]["tools"]
+    schema = tool["input_schema"]
+    (draft_def,) = [d for name, d in schema["$defs"].items() if "Draft" in name]
+    assert draft_def["required"] == list(get_args(SpecField))
+
+
+def test_interview_strips_the_message(fake_llm):
+    fake_llm.reply(" " * MAX_MESSAGE + "How big?\n", submit={"draft": EMPTY, "question": QUESTION})
+    *_, result = run_interview()
+    assert result.message == "How big?"
