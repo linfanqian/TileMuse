@@ -4,6 +4,7 @@
 removed once the frontend moves to the interview (#23).
 """
 
+import logging
 from collections.abc import AsyncIterator, Sequence
 from contextlib import aclosing
 from typing import Annotated, Literal, Self
@@ -22,6 +23,8 @@ from app.spec import (
     SpecDraft,
     SpecField,
 )
+
+logger = logging.getLogger(__name__)
 
 # The JSON schema carries field names and enums; this states the checks in spec.py. The
 # player_spawn/exit line is a design requirement that nothing checks yet.
@@ -162,6 +165,9 @@ def _message(text: str, question: Question | None) -> str:
     """Claude's message, valid as the next turn's history. A fallback if Claude wrote none."""
     text = text.strip()  # As ChatMessage stores it.
     if len(text) > MAX_MESSAGE:
+        logger.warning(
+            "Claude's interview message is %d characters, over %d", len(text), MAX_MESSAGE
+        )
         raise LLMError(f"Claude's message is over {MAX_MESSAGE} characters")
     if text:
         return text

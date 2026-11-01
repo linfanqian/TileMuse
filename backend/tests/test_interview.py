@@ -1,5 +1,4 @@
 import asyncio
-import json
 from typing import get_args
 
 import anthropic
@@ -12,6 +11,7 @@ from app.interview import (
     ChatMessage,
     InterviewResult,
     Question,
+    _Turn,
     idea_to_spec,
     interview,
 )
@@ -93,7 +93,7 @@ def test_interview_sends_history_and_draft(fake_llm):
     assert request["system"].startswith(INTERVIEW_SYSTEM)
     assert draft.model_dump_json() in request["system"]
     (tool,) = request["tools"]
-    assert '"Question"' in json.dumps(tool["input_schema"])
+    assert tool["input_schema"] == anthropic.transform_schema(_Turn)
 
 
 def test_interview_retries_a_finish_with_missing_fields(fake_llm):
@@ -140,10 +140,19 @@ def test_interview_falls_back_when_claude_writes_no_message(fake_llm, make_spec,
     ChatMessage(role="assistant", content=result.message)
 
 
-def test_interview_fails_on_a_message_too_long_for_the_next_turn(fake_llm):
+def test_interview_falls_back_when_a_retry_drops_the_stale_message(fake_llm):
+    # "All done!" doesn't fit the question the retry adds, and the retry wrote no new message.
+    fake_llm.reply("All done!", submit={"draft": EMPTY, "question": None})
+    fake_llm.reply(submit={"draft": EMPTY, "question": QUESTION})
+    *_, result = run_interview()
+    assert result.message == "What should the width be?"
+
+
+def test_interview_fails_on_a_message_too_long_for_the_next_turn(fake_llm, caplog):
     fake_llm.reply("x" * (MAX_MESSAGE + 1), submit={"draft": EMPTY, "question": QUESTION})
     with pytest.raises(LLMError, match="characters"):
         run_interview()
+    assert "over 2000" in caplog.text
 
 
 def test_interview_retries_a_draft_that_drops_a_field(fake_llm):

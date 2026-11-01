@@ -275,10 +275,11 @@ def test_stream_retries_invalid_submission_with_tool_result(fake_llm):
 
 
 @pytest.mark.parametrize("retry_text", ["", " \n"])
-def test_stream_keeps_the_message_when_the_retry_writes_none(fake_llm, retry_text):
+def test_stream_drops_the_stale_message_when_the_retry_writes_none(fake_llm, retry_text):
+    # The first message may not fit the corrected result, so the caller falls back instead.
     fake_llm.reply("Hello.", submit={"word": "hi"})
     fake_llm.reply(retry_text, submit={"word": "hello"})
-    assert stream_events()[-1] == llm.Done(Answer(word="hello"), "Hello.")
+    assert stream_events()[-1] == llm.Done(Answer(word="hello"), "")
 
 
 def test_stream_uses_the_first_valid_submission(fake_llm):

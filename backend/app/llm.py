@@ -279,7 +279,8 @@ async def stream[T: BaseModel](
     A server-side fallback mid-output continues the text already yielded, so nothing is
     retracted. An invalid submission is retried once with the errors. The retry's text isn't
     yielded, but if Claude was asked to rewrite it, it replaces `Done.text`, so callers show
-    `Done.text` in place of the streamed text. LLMError can be raised after text was yielded.
+    `Done.text` in place of the streamed text. It's empty if Claude wrote none, since the first
+    message may not fit the corrected result. LLMError can be raised after text was yielded.
     Callers discard that text.
     The HTTP stream stays open while the generator is suspended, so a caller that may stop
     early wraps it in `contextlib.aclosing`.
@@ -312,6 +313,6 @@ async def stream[T: BaseModel](
         except (ValidationError, LookupError) as e:
             logger.warning("Claude's %s submission failed validation twice: %s", output.__name__, e)
             raise LLMError("Claude's submission failed validation twice") from e
-        if rewrite and _text(response).strip():
-            text = _text(response)
+        if rewrite:
+            text = _text(response) if _text(response).strip() else ""
     yield Done(result, text)
