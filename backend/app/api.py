@@ -1,5 +1,6 @@
 """HTTP routes. The only module that wires pipeline stages together."""
 
+import logging
 from collections.abc import AsyncIterable
 from contextlib import aclosing
 from random import Random
@@ -18,6 +19,7 @@ from app.tiled import to_tiled
 from app.validator import validate
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class SpecRequest(BaseModel):
@@ -126,8 +128,8 @@ async def spec(req: SpecRequest) -> MapSpec:
 
 @router.post("/interview")
 async def interview_turn(req: InterviewRequest) -> AsyncIterable[InterviewEvent]:
-    """Streams JSON Lines: text events, then done. The status is sent before Claude replies,
-    so LLM failures arrive as an error event instead of a 502 or 503."""
+    """Streams JSON Lines: text events, then done or error. The status is sent before Claude
+    replies, so failures arrive as an error event instead of a 5xx."""
     try:
         async with aclosing(interview(req.messages, req.draft)) as events:
             async for event in events:
@@ -139,6 +141,10 @@ async def interview_turn(req: InterviewRequest) -> AsyncIterable[InterviewEvent]
         yield InterviewError(message=str(e))
     except LLMError:
         yield InterviewError(message="Couldn't get the next question from the LLM. Try again.")
+    except Exception:
+        # Every stream still ends in done or error, so the client needn't handle a cut-off one.
+        logger.exception("Interview turn failed")
+        yield InterviewError(message="Something went wrong. Try again.")
 
 
 @router.post("/generate")

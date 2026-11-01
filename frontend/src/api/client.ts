@@ -9,6 +9,13 @@ export type Violation = Schemas['Violation']
 export type Explanation = Schemas['Explanation']
 export type GenerateResult = Schemas['GenerateResult']
 export type ValidationResult = Schemas['ValidationResult']
+export type SpecDraft = Schemas['SpecDraft']
+// /api/interview streams one of these per JSON line. schema.d.ts lists the
+// models but types the route's response as unknown, so the union is built here.
+export type InterviewEvent =
+  | Schemas['InterviewText']
+  | Schemas['InterviewDone']
+  | Schemas['InterviewError']
 
 // Request and response types come from the generated schema, so a renamed route or
 // field fails typecheck instead of at runtime. Only JSON routes: /api/interview streams JSON Lines.

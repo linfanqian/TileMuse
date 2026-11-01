@@ -287,6 +287,13 @@ def test_stream_uses_the_first_valid_submission(fake_llm):
     assert len(fake_llm.requests) == 1
 
 
+def test_stream_keeps_the_message_after_a_missing_submit(fake_llm):
+    # Claude was told not to repeat the message, so any text in the retry is filler.
+    fake_llm.reply("Hello.")
+    fake_llm.reply("Sorry, here it is.", submit={"word": "hello"})
+    assert stream_events()[-1] == llm.Done(Answer(word="hello"), "Hello.")
+
+
 def test_stream_asks_for_submit_when_missing(fake_llm):
     fake_llm.reply("Hello.")
     fake_llm.reply(submit={"word": "hello"})

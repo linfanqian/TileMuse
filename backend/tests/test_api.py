@@ -5,7 +5,9 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
+from app import api
 from app.api import MAX_MESSAGES
+from app.llm import TextDelta
 from app.main import app
 from app.spec import MapSpec, SpecDraft
 
@@ -195,3 +197,15 @@ def test_interview_accepts_history_at_the_cap(fake_llm):
     assert len(messages) == MAX_MESSAGES
     *_, done = interview_events({"messages": messages})
     assert done["type"] == "done"
+
+
+def test_interview_reports_an_unexpected_failure_as_an_error_event(monkeypatch, caplog):
+    async def broken(messages, draft):
+        yield TextDelta("Hel")
+        raise RuntimeError("bug")
+
+    monkeypatch.setattr(api, "interview", broken)
+    text, error = interview_events({"messages": [IDEA]})
+    assert text == {"type": "text", "text": "Hel"}
+    assert error == {"type": "error", "message": "Something went wrong. Try again."}
+    assert "Interview turn failed" in caplog.text
