@@ -1,3 +1,4 @@
+import anthropic
 import pytest
 from pydantic import ValidationError
 
@@ -30,8 +31,10 @@ def test_valid_spec_roundtrips_json():
 def test_rules_parse_by_type():
     spec = MapSpec.model_validate(FULL_SPEC)
     assert spec.rules == [
-        MaxDensityRule(max=0.2),
-        MinDistanceRule(a=ObjectKind.GUARD, b=ObjectKind.PLAYER_SPAWN, tiles=5),
+        MaxDensityRule(type="max_density", max=0.2),
+        MinDistanceRule(
+            type="min_distance", a=ObjectKind.GUARD, b=ObjectKind.PLAYER_SPAWN, tiles=5
+        ),
     ]
 
 
@@ -50,6 +53,21 @@ def test_requires_core_fields(field):
 def test_rejects_unknown_rule_type():
     with pytest.raises(ValidationError):
         MapSpec.model_validate({**FULL_SPEC, "rules": [{"type": "no_such_rule"}]})
+
+
+@pytest.mark.parametrize("rule", [{"max": 0.2}, {"type": "max-density", "max": 0.2}])
+def test_rejects_missing_or_misspelled_rule_type(rule):
+    with pytest.raises(ValidationError):
+        MapSpec.model_validate({**FULL_SPEC, "rules": [rule]})
+
+
+@pytest.mark.parametrize(
+    ("rule", "tag"), [("MaxDensityRule", "max_density"), ("MinDistanceRule", "min_distance")]
+)
+def test_schema_sent_to_claude_requires_rule_type(rule, tag):
+    schema = anthropic.transform_schema(MapSpec)["$defs"][rule]
+    assert "type" in schema["required"]
+    assert schema["properties"]["type"]["enum"] == [tag]
 
 
 def test_rejects_unknown_object_kind():
