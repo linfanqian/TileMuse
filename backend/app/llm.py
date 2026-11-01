@@ -247,7 +247,11 @@ def _submission[T: BaseModel](response: BetaMessage, output: type[T]) -> T:
 
 
 def _feedback(response: BetaMessage, error: Exception) -> BetaMessageParam:
-    """The user turn asking for a corrected submission, without repeating the message."""
+    """The user turn asking for a corrected submission.
+
+    A missing call leaves the message as it was. Invalid input may mean the message no longer
+    fits, so Claude writes it again to match the corrected input.
+    """
     calls = _tool_calls(response)
     if not calls:
         return {
@@ -257,8 +261,8 @@ def _feedback(response: BetaMessage, error: Exception) -> BetaMessageParam:
         }
     # Every tool_use needs a matching tool_result.
     text = (
-        f"Invalid input:\n{error}\nCall {SUBMIT} again with corrected input. "
-        "Don't repeat your message."
+        f"Invalid input:\n{error}\nWrite your whole message to the user again so it matches "
+        f"the corrected input, then call {SUBMIT} again with it."
     )
     results = [
         {"type": "tool_result", "tool_use_id": call.id, "is_error": True, "content": text}
@@ -274,7 +278,9 @@ async def stream[T: BaseModel](
 
     A server-side fallback mid-output continues the text already yielded, so nothing is
     retracted. An invalid submission is retried once with the errors. The retry's text isn't
-    yielded. LLMError can be raised after text was yielded. Callers discard that text.
+    yielded, but if it has any, it replaces the message in `Done.text`, so callers show
+    `Done.text` in place of the streamed text. LLMError can be raised after text was yielded.
+    Callers discard that text.
     The HTTP stream stays open while the generator is suspended, so a caller that may stop
     early wraps it in `contextlib.aclosing`.
     """
@@ -305,4 +311,6 @@ async def stream[T: BaseModel](
         except (ValidationError, LookupError) as e:
             logger.warning("Claude's %s submission failed validation twice: %s", output.__name__, e)
             raise LLMError("Claude's submission failed validation twice") from e
+        if _text(response).strip():
+            text = _text(response)
     yield Done(result, text)

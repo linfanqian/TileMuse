@@ -256,10 +256,11 @@ def test_stream_ignores_a_submit_before_a_fallback(fake_llm):
 
 
 def test_stream_retries_invalid_submission_with_tool_result(fake_llm):
+    # The retry's message isn't streamed but replaces the first one, which may not fit anymore.
     fake_llm.reply("Hello.", submit={"word": "hi"})
-    fake_llm.reply("Not shown.", submit={"word": "hello"})
+    fake_llm.reply("Hello again.", submit={"word": "hello"})
     events = stream_events()
-    assert events == [llm.TextDelta("Hello."), llm.Done(Answer(word="hello"), "Hello.")]
+    assert events == [llm.TextDelta("Hello."), llm.Done(Answer(word="hello"), "Hello again.")]
     first, second = fake_llm.requests
     *history, assistant, feedback = second["messages"]
     assert history == MESSAGES
@@ -269,7 +270,15 @@ def test_stream_retries_invalid_submission_with_tool_result(fake_llm):
     assert result["type"] == "tool_result"
     assert (result["tool_use_id"], result["is_error"]) == (call_id, True)
     assert "at least 3 characters" in result["content"]
+    assert "Write your whole message to the user again" in result["content"]
     assert second["tools"] == first["tools"]
+
+
+@pytest.mark.parametrize("retry_text", ["", " \n"])
+def test_stream_keeps_the_message_when_the_retry_writes_none(fake_llm, retry_text):
+    fake_llm.reply("Hello.", submit={"word": "hi"})
+    fake_llm.reply(retry_text, submit={"word": "hello"})
+    assert stream_events()[-1] == llm.Done(Answer(word="hello"), "Hello.")
 
 
 def test_stream_uses_the_first_valid_submission(fake_llm):

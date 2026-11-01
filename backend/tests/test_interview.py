@@ -99,8 +99,11 @@ def test_interview_sends_history_and_draft(fake_llm):
 def test_interview_retries_a_finish_with_missing_fields(fake_llm):
     draft = SpecDraft(theme="library").model_dump()
     fake_llm.reply("All done!", submit={"draft": draft, "question": None})
-    fake_llm.reply(submit={"draft": draft, "question": QUESTION})
-    *_, result = run_interview()
+    fake_llm.reply("How big should the room be?", submit={"draft": draft, "question": QUESTION})
+    *text, result = run_interview()
+    assert text == [TextDelta("All done!")]
+    # The retry's message replaces the streamed one, which no longer fits the question.
+    assert result.message == "How big should the room be?"
     assert result.question == Question.model_validate(QUESTION)
     feedback = fake_llm.requests[1]["messages"][-1]["content"][0]["content"]
     assert "missing: mood, width, height, doors, objects, rules" in feedback

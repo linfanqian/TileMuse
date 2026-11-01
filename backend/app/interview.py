@@ -53,10 +53,13 @@ Each turn:
 ones you didn't ask about, and keep decided fields unless the user changes them. Leave a field \
 null until it is decided. "rules": [] means no layout rules.
 - Then ask about the one most important field that is still null or vague. Your message is that \
-question alone: short, plain language. In the submitted question, give the field, a one-line \
-reason it matters, and 2-4 concrete suggested answers that fit the idea so far.
+question alone, in one short sentence. Don't list options or examples in it: the suggested \
+answers show next to it. In the submitted question, give the field, a one-line reason it \
+matters, and 2-4 concrete suggested answers that fit the idea so far.
 - Once every field is set and the spec is consistent, either ask about a field that is still \
-vague, or set question to null and tell the user the spec is ready to generate.
+vague, or set question to null and tell the user in a sentence or two that the spec is ready to \
+generate. The spec panel already shows every field, so don't list them.
+- Write plain text with no Markdown: the chat shows it as is.
 
 {_SPEC_RULES}"""
 
@@ -123,7 +126,7 @@ class _Turn(BaseModel):
 
 class InterviewResult(BaseModel):
     # The whole message to the user. The client shows it in place of the streamed text, which
-    # it differs from when Claude wrote none.
+    # it differs from when Claude wrote none or rewrote it on a retry.
     message: str
     question: Question | None  # None once Claude has nothing left to ask.
     draft: SpecDraft
