@@ -157,3 +157,14 @@ def test_complete_draft_checks_consistency():
     draft = SpecDraft.model_validate({**FULL_SPEC, "width": 4, "height": 4, "rules": []})
     with pytest.raises(ValidationError, match="do not fit"):
         draft.to_spec()
+
+
+def test_object_and_rule_lists_are_capped(make_spec):
+    # Bounds the draft that goes into the interview's prompt, which isn't checked for repeats.
+    objects = [{"kind": "chest", "count": 1}] * 8
+    rules = [{"type": "max_density", "max": 0.5}] * 30
+    for data in ({"objects": objects}, {"rules": rules}):
+        with pytest.raises(ValidationError, match="at most"):
+            SpecDraft.model_validate(data)
+        with pytest.raises(ValidationError, match="at most"):
+            make_spec(**data)

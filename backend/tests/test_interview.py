@@ -180,3 +180,20 @@ def test_interview_strips_the_message(fake_llm):
     fake_llm.reply(" " * MAX_MESSAGE + "How big?\n", submit={"draft": EMPTY, "question": QUESTION})
     *_, result = run_interview()
     assert result.message == "How big?"
+
+
+def test_interview_keeps_asking_while_the_draft_does_not_fit(fake_llm, make_spec):
+    # The user shrank the room; Claude asks how to resolve it instead of failing the turn.
+    crowded = {
+        **make_spec(width=4, height=4).model_dump(),
+        "objects": [{"kind": "chest", "count": 5}],
+    }
+    question = {**QUESTION, "field": "objects"}
+    fake_llm.reply(
+        "Five chests don't fit now. Which should go?",
+        submit={"draft": crowded, "question": question},
+    )
+    *_, result = run_interview()
+    assert len(fake_llm.requests) == 1
+    assert result.spec is None
+    assert result.draft.missing() == []

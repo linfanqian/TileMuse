@@ -249,21 +249,14 @@ def _submission[T: BaseModel](response: BetaMessage, output: type[T]) -> T:
 def _feedback(response: BetaMessage, error: Exception) -> BetaMessageParam:
     """The user turn asking for a corrected submission.
 
-    A missing call leaves the message as it was. Invalid input may mean the message no longer
-    fits, so Claude writes it again to match the corrected input.
+    Either way Claude writes its whole message again, so the message matches what it submits.
     """
+    rewrite = "Write your whole message to the user again so it matches what you submit, then "
     calls = _tool_calls(response)
     if not calls:
-        return {
-            "role": "user",
-            "content": f"Call the {SUBMIT} tool with the structured result. "
-            "Don't repeat your message.",
-        }
+        return {"role": "user", "content": f"{rewrite}call the {SUBMIT} tool."}
     # Every tool_use needs a matching tool_result.
-    text = (
-        f"Invalid input:\n{error}\nWrite your whole message to the user again so it matches "
-        f"the corrected input, then call {SUBMIT} again with it."
-    )
+    text = f"Invalid input:\n{error}\n{rewrite}call {SUBMIT} again with corrected input."
     results = [
         {"type": "tool_result", "tool_use_id": call.id, "is_error": True, "content": text}
         for call in calls
@@ -277,11 +270,10 @@ async def stream[T: BaseModel](
     """Streams the message to the user, then yields the validated `output` from a `submit` call.
 
     A server-side fallback mid-output continues the text already yielded, so nothing is
-    retracted. An invalid submission is retried once with the errors. The retry's text isn't
-    yielded, but if Claude was asked to rewrite it, it replaces `Done.text`, so callers show
-    `Done.text` in place of the streamed text. It's empty if Claude wrote none, since the first
-    message may not fit the corrected result. LLMError can be raised after text was yielded.
-    Callers discard that text.
+    retracted. A missing or invalid submission is retried once, and the retry rewrites the
+    message. Its text isn't yielded but replaces `Done.text`, even when empty, since the first
+    message may not fit the corrected result. So callers show `Done.text` in place of the
+    streamed text. LLMError can be raised after text was yielded. Callers discard that text.
     The HTTP stream stays open while the generator is suspended, so a caller that may stop
     early wraps it in `contextlib.aclosing`.
     """
@@ -305,7 +297,6 @@ async def stream[T: BaseModel](
     try:
         result = _submission(response, output)
     except (ValidationError, LookupError) as e:
-        rewrite = bool(_tool_calls(response))  # _feedback asks for the message again only then.
         retry = _retry(messages, response, _feedback(response, e))
         response = await _create(system, retry, tools=tools)
         try:
@@ -313,6 +304,5 @@ async def stream[T: BaseModel](
         except (ValidationError, LookupError) as e:
             logger.warning("Claude's %s submission failed validation twice: %s", output.__name__, e)
             raise LLMError("Claude's submission failed validation twice") from e
-        if rewrite:
-            text = _text(response) if _text(response).strip() else ""
+        text = _text(response)
     yield Done(result, text)

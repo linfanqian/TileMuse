@@ -16,9 +16,9 @@ from app.llm import Done, LLMError, TextDelta, complete, stream
 from app.spec import (
     Doors,
     Label,
-    LayoutRule,
     MapSpec,
-    ObjectRequirement,
+    Objects,
+    Rules,
     Size,
     SpecDraft,
     SpecField,
@@ -59,6 +59,8 @@ null until it is decided. "rules": [] means no layout rules.
 question alone, in one short sentence. Don't list options or examples in it: the suggested \
 answers show next to it. In the submitted question, give the field, a one-line reason it \
 matters, and 2-4 concrete suggested answers that fit the idea so far.
+- If set fields don't fit together, for example the objects no longer fit after the user \
+shrinks the room, ask the user how to resolve it.
 - Once every field is set and the spec is consistent, either ask about a field that is still \
 vague, or set question to null and tell the user in a sentence or two that the spec is ready to \
 generate. The spec panel already shows every field, so don't list them.
@@ -100,8 +102,8 @@ class _SubmittedDraft(SpecDraft):
     width: Size | None
     height: Size | None
     doors: Doors | None
-    objects: list[ObjectRequirement] | None
-    rules: list[LayoutRule] | None
+    objects: Objects | None
+    rules: Rules | None
 
 
 class _Turn(BaseModel):
@@ -112,14 +114,18 @@ class _Turn(BaseModel):
 
     @model_validator(mode="after")
     def check_ready(self) -> Self:
+        # While asking, the draft may not fit together yet, e.g. right after the user shrinks the
+        # room. Claude asks how to resolve it instead of failing the turn.
+        if self.question is not None:
+            return self
         try:
             spec = self.draft.to_spec()
         except ValidationError as e:
             # Raised as a ValueError so the retry feedback says what doesn't fit.
             raise ValueError(
-                f"every draft field is set, but they don't fit together: {e}"
+                f"question is null, but the draft fields don't fit together: {e}"
             ) from None
-        if spec is None and self.question is None:
+        if spec is None:
             missing = ", ".join(self.draft.missing())
             raise ValueError(
                 f"question may be null only once every field is set; missing: {missing}"
@@ -133,7 +139,7 @@ class InterviewResult(BaseModel):
     message: str
     question: Question | None  # None once Claude has nothing left to ask.
     draft: SpecDraft
-    spec: MapSpec | None  # Set exactly when every draft field is set; the draft is then valid.
+    spec: MapSpec | None  # Set exactly when every draft field is set and they fit together.
 
 
 async def interview(
@@ -155,10 +161,17 @@ async def interview(
                     message=_message(event.text, turn.question),
                     question=turn.question,
                     draft=draft,
-                    spec=draft.to_spec(),
+                    spec=_ready_spec(draft),
                 )
             else:
                 yield event
+
+
+def _ready_spec(draft: SpecDraft) -> MapSpec | None:
+    try:
+        return draft.to_spec()
+    except ValidationError:
+        return None  # Claude's question is about resolving the conflict.
 
 
 def _message(text: str, question: Question | None) -> str:

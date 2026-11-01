@@ -58,6 +58,12 @@ LayoutRule = Annotated[MaxDensityRule | MinDistanceRule, Field(discriminator="ty
 Label = Annotated[str, Field(min_length=1, max_length=200)]
 Size = Annotated[int, Field(ge=4, le=128)]
 Doors = Annotated[int, Field(ge=1, le=8)]
+# Each kind once. Rules: one max_density, and one min_distance per unordered pair of kinds,
+# a kind with itself included. These also bound a draft, which isn't checked for repeats.
+Objects = Annotated[list[ObjectRequirement], Field(max_length=len(ObjectKind))]
+Rules = Annotated[
+    list[LayoutRule], Field(max_length=1 + len(ObjectKind) * (len(ObjectKind) + 1) // 2)
+]
 
 SpecField = Literal["theme", "mood", "width", "height", "doors", "objects", "rules"]
 
@@ -68,8 +74,8 @@ class MapSpec(BaseModel):
     width: Size
     height: Size
     doors: Doors = 1
-    objects: list[ObjectRequirement] = []
-    rules: list[LayoutRule] = []
+    objects: Objects = []
+    rules: Rules = []
 
     @model_validator(mode="after")
     def check_consistency(self) -> Self:
@@ -122,8 +128,8 @@ class SpecDraft(BaseModel):
     width: Size | None = None
     height: Size | None = None
     doors: Doors | None = None
-    objects: list[ObjectRequirement] | None = None
-    rules: list[LayoutRule] | None = None
+    objects: Objects | None = None
+    rules: Rules | None = None
 
     def missing(self) -> list[SpecField]:
         return [field for field in get_args(SpecField) if getattr(self, field) is None]

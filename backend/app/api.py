@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from app.explainer import explain
 from app.generator import generate
-from app.interview import ChatMessage, InterviewResult, idea_to_spec, interview
+from app.interview import MAX_MESSAGE, ChatMessage, InterviewResult, idea_to_spec, interview
 from app.llm import LLMError, LLMUnavailable, TextDelta
 from app.models import Explanation, GameMap, Violation
 from app.spec import MapSpec, SpecDraft
@@ -24,7 +24,9 @@ logger = logging.getLogger(__name__)
 
 class SpecRequest(BaseModel):
     # Bounds the LLM's token cost. A blank idea would still cost a call.
-    idea: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
+    idea: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE)
+    ]
 
 
 MAX_MESSAGES = 39

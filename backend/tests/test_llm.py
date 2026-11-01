@@ -248,8 +248,8 @@ def test_stream_continues_across_a_fallback(fake_llm):
 def test_stream_ignores_a_submit_before_a_fallback(fake_llm):
     declined = SimpleNamespace(type="tool_use", id="toolu_x", name="submit", input={"word": "hey"})
     fake_llm.reply("Hello.", before_fallback=[declined])
-    fake_llm.reply(submit={"word": "hello"})
-    assert stream_events()[-1] == llm.Done(Answer(word="hello"), "Hello.")
+    fake_llm.reply("Hello again.", submit={"word": "hello"})
+    assert stream_events()[-1] == llm.Done(Answer(word="hello"), "Hello again.")
     *_, assistant, feedback = fake_llm.requests[1]["messages"]
     assert [block.type for block in assistant["content"]] == ["fallback", "text"]
     assert "submit" in feedback["content"]
@@ -274,11 +274,10 @@ def test_stream_retries_invalid_submission_with_tool_result(fake_llm):
     assert second["tools"] == first["tools"]
 
 
-@pytest.mark.parametrize("retry_text", ["", " \n"])
-def test_stream_drops_the_stale_message_when_the_retry_writes_none(fake_llm, retry_text):
+def test_stream_drops_the_stale_message_when_the_retry_writes_none(fake_llm):
     # The first message may not fit the corrected result, so the caller falls back instead.
     fake_llm.reply("Hello.", submit={"word": "hi"})
-    fake_llm.reply(retry_text, submit={"word": "hello"})
+    fake_llm.reply(submit={"word": "hello"})
     assert stream_events()[-1] == llm.Done(Answer(word="hello"), "")
 
 
@@ -288,21 +287,16 @@ def test_stream_uses_the_first_valid_submission(fake_llm):
     assert len(fake_llm.requests) == 1
 
 
-def test_stream_keeps_the_message_after_a_missing_submit(fake_llm):
-    # Claude was told not to repeat the message, so any text in the retry is filler.
-    fake_llm.reply("Hello.")
-    fake_llm.reply("Sorry, here it is.", submit={"word": "hello"})
-    assert stream_events()[-1] == llm.Done(Answer(word="hello"), "Hello.")
-
-
-def test_stream_asks_for_submit_when_missing(fake_llm):
-    fake_llm.reply("Hello.")
-    fake_llm.reply(submit={"word": "hello"})
+def test_stream_asks_for_submit_and_the_message_when_missing(fake_llm):
+    # The submission may not match the first message, so the retry's message replaces it.
+    fake_llm.reply("How big?")
+    fake_llm.reply("What mood?", submit={"word": "hello"})
     events = stream_events()
-    assert events[-1] == llm.Done(Answer(word="hello"), "Hello.")
+    assert events == [llm.TextDelta("How big?"), llm.Done(Answer(word="hello"), "What mood?")]
     feedback = fake_llm.requests[1]["messages"][-1]
     assert feedback["role"] == "user"
     assert "submit" in feedback["content"]
+    assert "Write your whole message to the user again" in feedback["content"]
 
 
 def test_stream_fails_after_second_invalid_submission(fake_llm, caplog):

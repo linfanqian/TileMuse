@@ -209,3 +209,15 @@ def test_interview_reports_an_unexpected_failure_as_an_error_event(monkeypatch, 
     assert text == {"type": "text", "text": "Hel"}
     assert error == {"type": "error", "message": "Something went wrong. Try again."}
     assert "Interview turn failed" in caplog.text
+
+
+def test_interview_accepts_a_draft_that_does_not_fit(fake_llm, make_spec):
+    # A stale draft from the client mustn't block the session: Claude asks how to fix it.
+    crowded = {
+        **make_spec(width=4, height=4).model_dump(),
+        "objects": [{"kind": "chest", "count": 5}],
+    }
+    fake_llm.reply("Which should go?", submit={"draft": crowded, "question": QUESTION})
+    *_, done = interview_events({"messages": [IDEA], "draft": crowded})
+    assert done["type"] == "done"
+    assert done["spec"] is None
