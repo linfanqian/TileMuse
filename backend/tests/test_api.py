@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app import api
 from app.api import MAX_MESSAGES
+from app.interview import MAX_MESSAGE
 from app.llm import TextDelta
 from app.main import app
 from app.spec import MapSpec, SpecDraft
@@ -60,7 +61,7 @@ def test_spec_returns_502_when_the_connection_drops_mid_reply(fake_llm):
     assert res.status_code == 502
 
 
-@pytest.mark.parametrize("idea", ["", "   ", "\n\t", "x" * 2001])
+@pytest.mark.parametrize("idea", ["", "   ", "\n\t", "x" * (MAX_MESSAGE + 1)])
 def test_spec_rejects_bad_idea_length(fake_llm, idea):
     res = client.post("/api/spec", json={"idea": idea})
     assert res.status_code == 422
@@ -170,7 +171,10 @@ def test_interview_reports_a_failure_mid_reply_after_the_text(fake_llm):
     fake_llm.fail(httpx2.ReadTimeout("timed out"), midway=True)
     text, error = interview_events({"messages": [IDEA]})
     assert text == {"type": "text", "text": "Hel"}
-    assert error["type"] == "error"
+    assert error == {
+        "type": "error",
+        "message": "Couldn't get the next question from the LLM. Try again.",
+    }
 
 
 @pytest.mark.parametrize(
@@ -181,7 +185,7 @@ def test_interview_reports_a_failure_mid_reply_after_the_text(fake_llm):
         [IDEA, IDEA],
         [IDEA, {"role": "assistant", "content": "What mood?"}],
         [{"role": "user", "content": "   "}],
-        [{"role": "user", "content": "x" * 2001}],
+        [{"role": "user", "content": "x" * (MAX_MESSAGE + 1)}],
         [IDEA, {"role": "assistant", "content": "?"}] * (MAX_MESSAGES // 2 + 1) + [IDEA],
     ],
 )
@@ -221,3 +225,10 @@ def test_interview_accepts_a_draft_that_does_not_fit(fake_llm, make_spec):
     *_, done = interview_events({"messages": [IDEA], "draft": crowded})
     assert done["type"] == "done"
     assert done["spec"] is None
+
+
+@pytest.mark.parametrize("draft", [{"width": 200}, {"theme": ""}, {"rules": [{"type": "nope"}]}])
+def test_interview_rejects_an_invalid_draft_field(fake_llm, draft):
+    res = client.post("/api/interview", json={"messages": [IDEA], "draft": draft})
+    assert res.status_code == 422
+    assert fake_llm.requests == []
