@@ -49,8 +49,8 @@ export interface paths {
         put?: never;
         /**
          * Interview Turn
-         * @description Streams JSON Lines: text events, then done. The status is sent before Claude replies,
-         *     so LLM failures arrive as an error event instead of a 502 or 503.
+         * @description Streams JSON Lines: text events, then done or error. The status is sent before Claude
+         *     replies, so failures arrive as an error event instead of a 5xx.
          */
         post: operations["interview_turn_api_interview_post"];
         delete?: never;
