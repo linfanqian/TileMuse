@@ -49,6 +49,7 @@ def kit(**overrides: Any) -> dict[str, Any]:
     pieces = ("top", "bottom", "left", "right")
     corners = ("corner_tl", "corner_tr", "corner_bl", "corner_br")
     return {
+        "description": "a kit",
         "floor": "floor",
         "walls": dict.fromkeys(pieces + corners, "wall"),
         "doors": dict.fromkeys(pieces, "door"),
@@ -57,8 +58,8 @@ def kit(**overrides: Any) -> dict[str, Any]:
     }
 
 
-def test_load_tileset_returns_all_themes():
-    assert set(load_tileset().kits) == {"dungeon", "town", "farm", "factory"}
+def test_load_tileset_keeps_the_first_kits():
+    assert {"dungeon", "town", "farm", "factory"} <= set(load_tileset().kits)
 
 
 def test_sheet_image_matches_catalog():
@@ -93,6 +94,12 @@ def test_catalog_rejects_duplicate_name():
 def test_catalog_rejects_id_outside_sheet(tiles):
     with pytest.raises(ValidationError, match="outside"):
         Catalog(**catalog(entry(**tiles)))
+
+
+def test_kit_rejects_missing_description():
+    no_description = {k: v for k, v in kit().items() if k != "description"}
+    with pytest.raises(ValidationError, match="description"):
+        ThemeKit(**no_description)
 
 
 def test_kit_rejects_missing_wall_piece():

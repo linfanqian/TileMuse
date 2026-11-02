@@ -9,6 +9,7 @@ from app.spec import MapSpec, MaxDensityRule, MinDistanceRule, ObjectKind, SpecD
 FULL_SPEC = {
     "theme": "abandoned library",
     "mood": "creepy",
+    "kit": "dungeon",
     "width": 20,
     "height": 14,
     "doors": 2,
@@ -44,7 +45,7 @@ def test_optional_fields_default_to_empty(make_spec):
     assert (spec.doors, spec.objects, spec.rules) == (1, [], [])
 
 
-@pytest.mark.parametrize("field", ["theme", "mood", "width", "height"])
+@pytest.mark.parametrize("field", ["theme", "mood", "kit", "width", "height"])
 def test_requires_core_fields(field):
     data = {k: v for k, v in FULL_SPEC.items() if k != field}
     with pytest.raises(ValidationError):
@@ -69,6 +70,11 @@ def test_schema_sent_to_claude_requires_rule_type(rule, tag):
     schema = anthropic.transform_schema(MapSpec)["$defs"][rule]
     assert "type" in schema["required"]
     assert schema["properties"]["type"]["enum"] == [tag]
+
+
+def test_rejects_unknown_kit():
+    with pytest.raises(ValidationError):
+        MapSpec.model_validate({**FULL_SPEC, "kit": "no_such_kit"})
 
 
 def test_rejects_unknown_object_kind():
@@ -152,7 +158,14 @@ def test_empty_draft_is_missing_every_field():
 
 
 @pytest.mark.parametrize(
-    "field", [{"width": 200}, {"theme": ""}, {"doors": 0}, {"rules": [{"type": "nope"}]}]
+    "field",
+    [
+        {"width": 200},
+        {"theme": ""},
+        {"kit": "no_such_kit"},
+        {"doors": 0},
+        {"rules": [{"type": "nope"}]},
+    ],
 )
 def test_draft_checks_each_field(field):
     with pytest.raises(ValidationError):

@@ -233,6 +233,11 @@ export interface components {
             theme: string;
             /** Mood */
             mood: string;
+            /**
+             * Kit
+             * @enum {string}
+             */
+            kit: "dungeon" | "town" | "farm" | "factory";
             /** Width */
             width: number;
             /** Height */
@@ -303,7 +308,7 @@ export interface components {
              * Field
              * @enum {string}
              */
-            field: "theme" | "mood" | "width" | "height" | "doors" | "objects" | "rules";
+            field: "theme" | "mood" | "kit" | "width" | "height" | "doors" | "objects" | "rules";
             /** Reason */
             reason: string;
             /** Suggestions */
@@ -320,6 +325,8 @@ export interface components {
             theme?: string | null;
             /** Mood */
             mood?: string | null;
+            /** Kit */
+            kit?: ("dungeon" | "town" | "farm" | "factory") | null;
             /** Width */
             width?: number | null;
             /** Height */

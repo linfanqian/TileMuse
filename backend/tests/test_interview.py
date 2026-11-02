@@ -16,7 +16,12 @@ from app.interview import (
     interview,
 )
 from app.llm import LLMError, TextDelta
-from app.spec import MapSpec, SpecDraft, SpecField
+from app.spec import Kit, MapSpec, SpecDraft, SpecField
+
+
+@pytest.mark.parametrize("system", [SYSTEM, INTERVIEW_SYSTEM])
+def test_prompt_describes_every_kit(system):
+    assert all(f"{kit} for " in system for kit in get_args(Kit))
 
 
 def test_idea_to_spec_returns_spec_from_llm(fake_llm, make_spec):
@@ -106,7 +111,7 @@ def test_interview_retries_a_finish_with_missing_fields(fake_llm):
     assert result.message == "How big should the room be?"
     assert result.question == Question.model_validate(QUESTION)
     feedback = fake_llm.requests[1]["messages"][-1]["content"][0]["content"]
-    assert "missing: mood, width, height, doors, objects, rules" in feedback
+    assert "missing: mood, kit, width, height, doors, objects, rules" in feedback
 
 
 def test_interview_retries_a_complete_draft_that_does_not_fit(fake_llm, make_spec):

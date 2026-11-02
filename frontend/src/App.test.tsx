@@ -9,6 +9,7 @@ test('an idea becomes a map with its issues', async () => {
   vi.mocked(client.getSpec).mockResolvedValue({
     theme: 'dungeon',
     mood: 'quiet',
+    kit: 'dungeon',
     width: 4,
     height: 4,
     doors: 1,

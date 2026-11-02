@@ -5,15 +5,13 @@ any pack. Loading runs every check, so bad data fails here and not in a later st
 """
 
 from functools import lru_cache
-from pathlib import Path
 from typing import Any, Literal, Self, get_args
 
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.kits import ASSETS, read_kits
 from app.spec import ObjectKind
-
-ASSETS = Path(__file__).resolve().parent.parent / "assets" / "tileset"
 
 Kind = Literal["floor", "wall", "door", "object", "decor", "character", "item"]
 Confidence = Literal["high", "medium", "low"]
@@ -75,6 +73,7 @@ class Catalog(BaseModel):
 
 
 class ThemeKit(BaseModel):
+    description: str = Field(min_length=1)  # shown to the LLM to choose a kit
     floor: str
     floor_shadow_top: str | None = None  # floor row under a two-row top wall
     walls: dict[WallPiece, str]
@@ -143,7 +142,5 @@ def _require_all[T, V](found: dict[T, V], wanted: Any, label: str) -> dict[T, V]
 
 @lru_cache
 def load_tileset() -> Tileset:
-    def read(name: str) -> Any:
-        return yaml.safe_load((ASSETS / name).read_text(encoding="utf-8"))
-
-    return Tileset(catalog=read("catalog.yaml"), kits=read("kits.yaml"))
+    catalog = yaml.safe_load((ASSETS / "catalog.yaml").read_text(encoding="utf-8"))
+    return Tileset(catalog=catalog, kits=read_kits())

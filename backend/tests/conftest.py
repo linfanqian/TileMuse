@@ -16,7 +16,14 @@ def make_spec() -> Callable[..., MapSpec]:
 
     def make(**overrides: Any) -> MapSpec:
         return MapSpec(
-            **{"theme": "dungeon", "mood": "quiet", "width": 16, "height": 12, **overrides}
+            **{
+                "theme": "dungeon",
+                "mood": "quiet",
+                "kit": "dungeon",
+                "width": 16,
+                "height": 12,
+                **overrides,
+            }
         )
 
     return make

@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, StringConstraints, ValidationError, model
 from app.llm import Done, LLMError, TextDelta, complete, stream
 from app.spec import (
     Doors,
+    Kit,
     Label,
     MapSpec,
     Objects,
@@ -23,13 +24,18 @@ from app.spec import (
     SpecDraft,
     SpecField,
 )
+from app.tileset import load_tileset
 
 logger = logging.getLogger(__name__)
 
+# Loading here also checks every kit at startup, so a bad kit is never offered to Claude.
+_KITS = ", ".join(f"{name} for {kit.description}" for name, kit in load_tileset().kits.items())
+
 # The JSON schema carries field names and enums; this states the checks in spec.py. The
 # player_spawn line is a design requirement that nothing checks yet.
-_SPEC_RULES = """\
+_SPEC_RULES = f"""\
 The spec must be consistent:
+- theme is free text. kit is the tile art, so choose the closest one: {_KITS}.
 - width and height are 4-128 tiles, including the outer walls. Objects go on the \
 (width - 2) * (height - 2) interior tiles.
 - doors is 1-8. Doors are the way out, so count any exits the user asks for as doors.
@@ -55,6 +61,8 @@ Each turn:
 - Update the draft from the whole conversation. Set every field the user's answers settle, even \
 ones you didn't ask about, and keep decided fields unless the user changes them. Leave a field \
 null until it is decided. "rules": [] means no layout rules.
+- Set kit yourself from the idea, using the closest one even if none fits well. Ask about it \
+only if the user wants to choose.
 - Then ask about the one most important field that is still null or vague. Your message is that \
 question alone, in one short sentence. Don't list options or examples in it: the suggested \
 answers show next to it. In the submitted question, give the field, a one-line reason it \
@@ -99,6 +107,7 @@ class _SubmittedDraft(SpecDraft):
 
     theme: Label | None
     mood: Label | None
+    kit: Kit | None
     width: Size | None
     height: Size | None
     doors: Doors | None

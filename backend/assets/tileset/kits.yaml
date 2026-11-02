@@ -1,10 +1,13 @@
 # Which catalog entries each theme uses. Edit this file by hand.
 # Names must exist in catalog.yaml with `confidence: high`.
 # A kit may use tiles from any pack.
+# `description` tells the LLM when to choose the kit. A new kit here is enough for the spec
+# and the prompts to offer it; then restart the backend and run `npm run gen:api`.
 # Doors double as exits, so there is no `exit` tile.
 # No pack has a lamp or torch, so `light` uses the closest match, alarm_beacon.
 
 dungeon:
+  description: stone interiors
   floor: sand_floor_a
   floor_shadow_top: sand_floor_shadow_top
   walls:
@@ -30,6 +33,7 @@ dungeon:
     light: alarm_beacon
 
 town:
+  description: fenced outdoor yards
   floor: grass
   walls:
     top: fence_top
@@ -54,6 +58,7 @@ town:
     light: alarm_beacon
 
 farm:
+  description: fenced yards with crops or animals
   floor: grass
   walls:
     top: fence_top
@@ -78,6 +83,7 @@ farm:
     light: alarm_beacon
 
 factory:
+  description: metal interiors
   floor: factory_floor
   walls:
     top: metal_wall_top
