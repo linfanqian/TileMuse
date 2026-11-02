@@ -16,7 +16,6 @@ FULL_SPEC = {
         {"kind": "player_spawn", "count": 1},
         {"kind": "guard", "count": 2},
         {"kind": "cover", "count": 6},
-        {"kind": "exit", "count": 1},
     ],
     "rules": [
         {"type": "max_density", "max": 0.2},

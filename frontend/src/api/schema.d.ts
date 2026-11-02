@@ -290,7 +290,7 @@ export interface components {
          * @description The fixed object set the generator can place.
          * @enum {string}
          */
-        ObjectKind: "player_spawn" | "exit" | "chest" | "guard" | "cover" | "key" | "light";
+        ObjectKind: "player_spawn" | "chest" | "guard" | "cover" | "key" | "light";
         /** ObjectRequirement */
         ObjectRequirement: {
             kind: components["schemas"]["ObjectKind"];

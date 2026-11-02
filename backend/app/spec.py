@@ -15,7 +15,6 @@ class ObjectKind(StrEnum):
     """The fixed object set the generator can place."""
 
     PLAYER_SPAWN = "player_spawn"
-    EXIT = "exit"
     CHEST = "chest"
     GUARD = "guard"
     COVER = "cover"

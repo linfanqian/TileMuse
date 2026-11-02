@@ -22,7 +22,7 @@ WallPiece = Literal[
     "top", "bottom", "left", "right", "corner_tl", "corner_tr", "corner_bl", "corner_br"
 ]
 
-# The catalog kind each object's tile must have. Doors double as exits, so `exit` has no tile.
+# The catalog kind each object's tile must have.
 OBJECT_TILE_KINDS: dict[ObjectKind, Kind] = {
     ObjectKind.PLAYER_SPAWN: "character",
     ObjectKind.CHEST: "object",
@@ -96,8 +96,6 @@ class ThemeKit(BaseModel):
     @field_validator("objects")
     @classmethod
     def check_objects(cls, objects: dict[ObjectKind, str]) -> dict[ObjectKind, str]:
-        if ObjectKind.EXIT in objects:
-            raise ValueError("exit has no tile: doors double as exits")
         return _require_all(objects, OBJECT_TILE_KINDS, "object kind")
 
     def slots(self) -> list[tuple[str, Kind]]:
