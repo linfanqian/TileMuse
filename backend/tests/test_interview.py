@@ -35,7 +35,7 @@ def test_idea_to_spec_returns_spec_from_llm(fake_llm, make_spec):
 
 
 def test_prompt_names_the_rule_tags():
-    # The structured-output schema doesn't require the tag, so the prompt asks for it.
+    # The schema requires the tag too; stating it saves a retry when Claude leaves it out.
     for tag in ('"type": "max_density"', '"type": "min_distance"'):
         assert tag in SYSTEM
 
