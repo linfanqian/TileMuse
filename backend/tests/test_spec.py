@@ -1,8 +1,10 @@
+from typing import get_args
+
 import anthropic
 import pytest
 from pydantic import ValidationError
 
-from app.spec import MapSpec, MaxDensityRule, MinDistanceRule, ObjectKind
+from app.spec import MapSpec, MaxDensityRule, MinDistanceRule, ObjectKind, SpecDraft, SpecField
 
 FULL_SPEC = {
     "theme": "abandoned library",
@@ -138,3 +140,49 @@ def test_rejects_repeated_rules(make_spec, rules):
     objects = [{"kind": "guard", "count": 1}, {"kind": "chest", "count": 1}]
     with pytest.raises(ValidationError, match="may not repeat"):
         make_spec(objects=objects, rules=rules)
+
+
+def test_draft_and_spec_fields_match():
+    assert list(SpecDraft.model_fields) == list(MapSpec.model_fields) == list(get_args(SpecField))
+
+
+def test_empty_draft_is_missing_every_field():
+    draft = SpecDraft()
+    assert draft.missing() == list(get_args(SpecField))
+    assert draft.to_spec() is None
+
+
+@pytest.mark.parametrize(
+    "field", [{"width": 200}, {"theme": ""}, {"doors": 0}, {"rules": [{"type": "nope"}]}]
+)
+def test_draft_checks_each_field(field):
+    with pytest.raises(ValidationError):
+        SpecDraft.model_validate(field)
+
+
+def test_partial_draft_is_not_a_spec():
+    draft = SpecDraft.model_validate({k: v for k, v in FULL_SPEC.items() if k != "rules"})
+    assert draft.missing() == ["rules"]
+    assert draft.to_spec() is None
+
+
+def test_complete_draft_becomes_spec():
+    assert SpecDraft.model_validate(FULL_SPEC).to_spec() == MapSpec.model_validate(FULL_SPEC)
+
+
+def test_complete_draft_checks_consistency():
+    # Each field is valid alone, but 10 objects don't fit in a 4x4 room's 4 interior tiles.
+    draft = SpecDraft.model_validate({**FULL_SPEC, "width": 4, "height": 4, "rules": []})
+    with pytest.raises(ValidationError, match="do not fit"):
+        draft.to_spec()
+
+
+def test_object_and_rule_lists_are_capped(make_spec):
+    # Bounds the draft that goes into the interview's prompt, which isn't checked for repeats.
+    objects = [{"kind": "chest", "count": 1}] * 8
+    rules = [{"type": "max_density", "max": 0.5}] * 30
+    for data in ({"objects": objects}, {"rules": rules}):
+        with pytest.raises(ValidationError, match="at most"):
+            SpecDraft.model_validate(data)
+        with pytest.raises(ValidationError, match="at most"):
+            make_spec(**data)

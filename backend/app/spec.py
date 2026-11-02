@@ -6,7 +6,7 @@ validator's job.
 
 from collections import Counter
 from enum import StrEnum
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal, Self, get_args
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -60,14 +60,28 @@ class MinDistanceRule(BaseModel):
 LayoutRule = Annotated[MaxDensityRule | MinDistanceRule, Field(discriminator="type")]
 
 
+# Field constraints shared by MapSpec and SpecDraft.
+Label = Annotated[str, Field(min_length=1, max_length=200)]
+Size = Annotated[int, Field(ge=4, le=128)]
+Doors = Annotated[int, Field(ge=1, le=8)]
+# Each kind once. Rules: one max_density, and one min_distance per unordered pair of kinds,
+# a kind with itself included. These also bound a draft, which isn't checked for repeats.
+Objects = Annotated[list[ObjectRequirement], Field(max_length=len(ObjectKind))]
+Rules = Annotated[
+    list[LayoutRule], Field(max_length=1 + len(ObjectKind) * (len(ObjectKind) + 1) // 2)
+]
+
+SpecField = Literal["theme", "mood", "width", "height", "doors", "objects", "rules"]
+
+
 class MapSpec(BaseModel):
-    theme: str = Field(min_length=1, max_length=200)
-    mood: str = Field(min_length=1, max_length=200)
-    width: int = Field(ge=4, le=128)
-    height: int = Field(ge=4, le=128)
-    doors: int = Field(1, ge=1, le=8)
-    objects: list[ObjectRequirement] = []
-    rules: list[LayoutRule] = []
+    theme: Label
+    mood: Label
+    width: Size
+    height: Size
+    doors: Doors = 1
+    objects: Objects = []
+    rules: Rules = []
 
     @model_validator(mode="after")
     def check_consistency(self) -> Self:
@@ -107,3 +121,27 @@ class MapSpec(BaseModel):
                         f"min_distance of {rule.tiles} exceeds the room's {max_distance}"
                     )
         return self
+
+
+class SpecDraft(BaseModel):
+    """A MapSpec being filled in by the interview. None means not decided yet.
+
+    Each field is checked on its own. Whether the fields fit together is checked by `to_spec`.
+    """
+
+    theme: Label | None = None
+    mood: Label | None = None
+    width: Size | None = None
+    height: Size | None = None
+    doors: Doors | None = None
+    objects: Objects | None = None
+    rules: Rules | None = None
+
+    def missing(self) -> list[SpecField]:
+        return [field for field in get_args(SpecField) if getattr(self, field) is None]
+
+    def to_spec(self) -> MapSpec | None:
+        """The spec once every field is set. Raises ValidationError if they don't fit together."""
+        if self.missing():
+            return None
+        return MapSpec.model_validate(self.model_dump())
