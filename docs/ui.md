@@ -42,11 +42,11 @@ flowchart LR
 - **Left rail.** Tabs for Chat and Spec. The Spec tab edits the same fields as the interview: size, doors, object counts, and layout rules.
 - **Center.** A tool palette (select, erase, floor, wall, door, and one tool per object kind), the map canvas, and a status bar with the hovered tile.
 - **Issues (right).** One card per violation, with the rule, the explanation from the explainer, and a suggested fix. "Show on map" highlights the tile (the red outline on the guard). Passing rules are listed below so the user knows what was checked.
-- **Toast.** An edit that would break a hard rule is reverted immediately and explained. Here, a bookshelf (shown dashed) would have sealed off the exit.
+- **Toast.** An edit that would break a hard rule is reverted immediately and explained. Here, a bookshelf (shown dashed) would have sealed off the door.
 
 ## Design decisions
 
-- **Two kinds of problems, two treatments.** Hard rules (exit reachable from the door, required objects present) make an unplayable map, so a breaking edit is reverted with a toast, as the proposal's "reject invalid changes and revert" asks. Spec rules (`min_distance`, `max_density`) are listed as issues the user can fix or accept, since fixing them may take several moves. Implementation is tracked in #17.
+- **Two kinds of problems, two treatments.** Hard rules (every door reachable from the player spawn, required objects present) make an unplayable map, so a breaking edit is reverted with a toast, as the proposal's "reject invalid changes and revert" asks. Spec rules (`min_distance`, `max_density`) are listed as issues the user can fix or accept, since fixing them may take several moves. Implementation is tracked in #17.
 - **The spec stays visible.** It is a side panel in the interview and a tab in the editor, so it is the single source of truth the user can always see and edit.
 - **Choices over open questions.** Every interview question offers 2-4 concrete answers, for users without design training.
 - **Explanations come from the explainer.** Issue text and fixes come from its templates, so the UI never invents violations.
