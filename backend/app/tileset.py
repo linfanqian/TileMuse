@@ -42,7 +42,7 @@ class TileEntry(BaseModel):
     @model_validator(mode="after")
     def check_parts(self) -> Self:
         width, height = self.footprint
-        if self.parts and len(self.parts) != width * height:
+        if len(self.parts) != width * height and (self.parts or (width, height) != (1, 1)):
             raise ValueError(f"{self.name}: {len(self.parts)} parts for a {width}x{height} entry")
         return self
 
