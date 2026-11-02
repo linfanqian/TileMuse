@@ -101,7 +101,7 @@ def test_rejects_a_room_with_no_space_for_a_door(make_spec):
 
 
 def test_rejects_too_many_objects_for_room(make_spec):
-    # A 4x4 room has 2x2 = 4 interior tiles.
+    # A 4x5 room has 2x3 = 6 interior tiles.
     make_spec(width=4, height=5, objects=[{"kind": "chest", "count": 6}])
     with pytest.raises(ValidationError, match="do not fit"):
         make_spec(width=4, height=5, objects=[{"kind": "chest", "count": 7}])
