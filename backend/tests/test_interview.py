@@ -115,8 +115,8 @@ def test_interview_retries_a_finish_with_missing_fields(fake_llm):
 
 
 def test_interview_retries_a_complete_draft_that_does_not_fit(fake_llm, make_spec):
-    spec = make_spec(width=4, height=4)
-    crowded = {**spec.model_dump(), "objects": [{"kind": "chest", "count": 5}]}
+    spec = make_spec(width=4, height=5)
+    crowded = {**spec.model_dump(), "objects": [{"kind": "chest", "count": 7}]}
     fake_llm.reply("Ready.", submit={"draft": crowded, "question": None})
     fake_llm.reply(submit={"draft": spec.model_dump(), "question": None})
     *_, result = run_interview()
@@ -190,12 +190,12 @@ def test_interview_strips_the_message(fake_llm):
 def test_interview_keeps_asking_while_the_draft_does_not_fit(fake_llm, make_spec):
     # The user shrank the room; Claude asks how to resolve it instead of failing the turn.
     crowded = {
-        **make_spec(width=4, height=4).model_dump(),
-        "objects": [{"kind": "chest", "count": 5}],
+        **make_spec(width=4, height=5).model_dump(),
+        "objects": [{"kind": "chest", "count": 7}],
     }
     question = {**QUESTION, "field": "objects"}
     fake_llm.reply(
-        "Five chests don't fit now. Which should go?",
+        "Seven chests don't fit now. Which should go?",
         submit={"draft": crowded, "question": question},
     )
     *_, result = run_interview()
