@@ -36,7 +36,7 @@ class TileEntry(BaseModel):
     parts: list[int] = []  # left to right, top to bottom; empty for a one-tile entry
     wall_role: str | None = None
     tags: list[str] = []
-    confidence: Confidence  # high means a person checked this entry
+    confidence: Confidence  # kits may only use high entries
     note: str = ""
 
     @model_validator(mode="after")

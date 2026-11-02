@@ -23,7 +23,7 @@ The tiles TileMuse draws maps with. Load them through `load_tileset()` in `backe
 
 - `name` is the unique key. `id` is not unique, because openings share tiles.
 - A multi-tile entry lists its tiles in `parts`, left to right and top to bottom. `footprint` is `[width, height]`.
-- `confidence: high` means a person checked the entry. Other entries are draft labels.
+- Tiles used by a kit were checked by eye in a sample room. All other entries are draft labels, even with `confidence: high`.
 - `tags` include `set:<name>` for floors, walls, and doors that fit together, and `on:<side>` for the walls a door fits in.
 - The catalog leaves out UI markers, building exteriors, and conveyor and pipe pieces with unknown joins.
 
