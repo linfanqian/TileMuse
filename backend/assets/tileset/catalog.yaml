@@ -1,0 +1,2864 @@
+image: tilesheet.png
+tile_size: 16
+columns: 12
+rows: 44
+entries:
+- id: 48
+  name: sand_floor_a
+  kind: floor
+  themes: [dungeon]
+  blocking: false
+  tags: [ground, primary, 'set:dungeon_stone']
+  confidence: high
+- id: 49
+  name: sand_floor_speckled
+  kind: floor
+  themes: [dungeon]
+  blocking: false
+  tags: [ground, 'set:dungeon_stone']
+  confidence: high
+- id: 42
+  name: sand_floor_rubble
+  kind: floor
+  themes: [dungeon]
+  blocking: false
+  tags: [ground, 'set:dungeon_stone']
+  confidence: high
+  note: floor with grey stone rubble; purely visual
+- id: 50
+  name: sand_floor_shadow_top
+  kind: floor
+  themes: [dungeon]
+  blocking: false
+  tags: [ground, shadow_top, 'set:dungeon_stone']
+  confidence: high
+  note: shadow along top edge; use on the floor row directly below a wall face
+- id: 51
+  name: sand_floor_shadow_top_speckled
+  kind: floor
+  themes: [dungeon]
+  blocking: false
+  tags: [ground, shadow_top, 'set:dungeon_stone']
+  confidence: high
+- id: 52
+  name: sand_floor_shadow_corner
+  kind: floor
+  themes: [dungeon]
+  blocking: false
+  tags: [ground, shadow_corner, 'set:dungeon_stone']
+  confidence: medium
+  note: shadow top+one side; sample map only uses it rotated (vd flags)
+- id: 53
+  name: sand_floor_shadow_end
+  kind: floor
+  themes: [dungeon]
+  blocking: false
+  tags: [ground, shadow_end, 'set:dungeon_stone']
+  confidence: medium
+  note: end cap of a top shadow run (right end)
+- id: 30
+  name: sand_floor_pillar_shadow
+  kind: floor
+  themes: [dungeon]
+  blocking: false
+  tags: [ground, 'set:dungeon_stone']
+  confidence: medium
+  note: floor under a wall pillar (6/18) – dark band at top
+- id: 0
+  name: dirt_ground
+  kind: floor
+  themes: [dungeon]
+  blocking: false
+  tags: [ground, outside, 'set:dungeon_stone']
+  confidence: high
+  note: dark brown earth; used OUTSIDE the walls (the 'rock' around rooms)
+- id: 2
+  name: stone_wall_top
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  footprint: [1, 2]
+  parts: [2, 40]
+  wall_role: top
+  tags: [structure, 'set:dungeon_stone']
+  confidence: high
+  note: 'top wall is 2 cells tall: rim row (2) above brick face row (40)'
+- id: 1
+  name: stone_wall_corner_tl
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  footprint: [1, 2]
+  parts: [1, 13]
+  wall_role: corner_tl
+  tags: [structure, 'set:dungeon_stone']
+  confidence: high
+  note: 1 on rim row, 13 on face row
+- id: 3
+  name: stone_wall_corner_tr
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  footprint: [1, 2]
+  parts: [3, 15]
+  wall_role: corner_tr
+  tags: [structure, 'set:dungeon_stone']
+  confidence: high
+  note: 3 on rim row, 15 on face row
+- id: 13
+  name: stone_wall_left
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: left
+  tags: [structure, 'set:dungeon_stone']
+  confidence: high
+- id: 15
+  name: stone_wall_right
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: right
+  tags: [structure, 'set:dungeon_stone']
+  confidence: high
+- id: 26
+  name: stone_wall_bottom
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: bottom
+  tags: [structure, 'set:dungeon_stone']
+  confidence: high
+  note: rim at top of cell, dirt below; visually thin
+- id: 25
+  name: stone_wall_corner_bl
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: corner_bl
+  tags: [structure, 'set:dungeon_stone']
+  confidence: high
+- id: 27
+  name: stone_wall_corner_br
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: corner_br
+  tags: [structure, 'set:dungeon_stone']
+  confidence: high
+- id: 40
+  name: stone_wall_face
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: face
+  tags: [structure, primary, 'set:dungeon_stone']
+  confidence: high
+- id: 57
+  name: stone_wall_face_edge_left
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: face
+  tags: [structure, 'set:dungeon_stone']
+  confidence: medium
+  note: brick face with a vertical rim on its left; used below inner corner 16
+- id: 59
+  name: stone_wall_face_edge_right
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: face
+  tags: [structure, 'set:dungeon_stone']
+  confidence: medium
+  note: brick face with a vertical rim on its right; used below inner corner 17
+- id: 58
+  name: stone_wall_face_pillar
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: face
+  tags: [structure, 'set:dungeon_stone']
+  confidence: low
+  note: brick face with rims on both sides; exact use unclear (1-wide wall end?)
+- id: 28
+  name: stone_wall_face_grate
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: face
+  tags: [structure, decoration, 'set:dungeon_stone']
+  confidence: medium
+  note: brick face with small barred window/drain
+- id: 4
+  name: stone_wall_inner_corner_tl
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: inner_corner_tl
+  tags: [structure, 'set:dungeon_stone']
+  confidence: medium
+  note: rim bend in tile's top-left; not needed for rectangular rooms
+- id: 5
+  name: stone_wall_inner_corner_tr
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: inner_corner_tr
+  tags: [structure, 'set:dungeon_stone']
+  confidence: medium
+  note: rim bend in tile's top-right
+- id: 16
+  name: stone_wall_inner_corner_bl
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: inner_corner_bl
+  tags: [structure, 'set:dungeon_stone']
+  confidence: medium
+  note: rim bend in tile's bottom-left
+- id: 17
+  name: stone_wall_inner_corner_br
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  wall_role: inner_corner_br
+  tags: [structure, 'set:dungeon_stone']
+  confidence: medium
+  note: rim bend in tile's bottom-right
+- id: 14
+  name: stone_wall_block
+  kind: wall
+  themes: [dungeon]
+  blocking: true
+  tags: [structure, 'set:dungeon_stone']
+  confidence: low
+  note: brick face with rims on left/right; centre of the 1-3/13-15/25-27 demo block
+- id: 45
+  name: wooden_door_closed
+  kind: door
+  themes: [dungeon]
+  blocking: false
+  tags: [entrance, 'on:top', 'set:dungeon_stone']
+  confidence: high
+  note: replaces one face-row cell.
+- id: 21
+  name: wooden_door_open
+  kind: door
+  themes: [dungeon]
+  blocking: false
+  tags: [entrance, 'on:top', 'set:dungeon_stone']
+  confidence: high
+  note: replaces one face-row cell. used in sample map
+- id: 33
+  name: wooden_door_ajar
+  kind: door
+  themes: [dungeon]
+  blocking: false
+  tags: [entrance, 'on:top', 'set:dungeon_stone']
+  confidence: medium
+  note: replaces one face-row cell.
+- id: 9
+  name: stone_archway_open
+  kind: door
+  themes: [dungeon]
+  blocking: false
+  tags: [entrance, 'on:top', 'set:dungeon_stone']
+  confidence: medium
+  note: replaces one face-row cell. dark open doorway, small debris at bottom
+- id: 46
+  name: wooden_double_door_closed
+  kind: door
+  themes: [dungeon]
+  blocking: false
+  footprint: [2, 1]
+  parts: [46, 47]
+  tags: [entrance, 'on:top', 'set:dungeon_stone']
+  confidence: high
+  note: replaces two face-row cells
+- id: 22
+  name: wooden_double_door_open
+  kind: door
+  themes: [dungeon]
+  blocking: false
+  footprint: [2, 1]
+  parts: [22, 23]
+  tags: [entrance, 'on:top', 'set:dungeon_stone']
+  confidence: medium
+- id: 34
+  name: wooden_double_door_ajar
+  kind: door
+  themes: [dungeon]
+  blocking: false
+  footprint: [2, 1]
+  parts: [34, 35]
+  tags: [entrance, 'on:top', 'set:dungeon_stone']
+  confidence: medium
+- id: 10
+  name: stone_archway_wide
+  kind: door
+  themes: [dungeon]
+  blocking: false
+  footprint: [2, 1]
+  parts: [10, 11]
+  tags: [entrance, 'on:top', 'set:dungeon_stone']
+  confidence: high
+  note: used in sample map
+- id: 5
+  name: stone_opening_bottom
+  kind: door
+  themes: [dungeon]
+  blocking: false
+  footprint: [3, 1]
+  parts: [5, 48, 4]
+  tags: [entrance, opening, 'on:bottom', 'set:dungeon_stone']
+  confidence: high
+  note: no door tile; bottom-wall gap capped by inner corners 5 | floor | 4. Verified in sample_room_dungeon.png
+- id: 17
+  name: stone_opening_left
+  kind: door
+  themes: [dungeon]
+  blocking: false
+  footprint: [1, 3]
+  parts: [17, 48, 5]
+  tags: [entrance, opening, 'on:left', 'set:dungeon_stone']
+  confidence: high
+  note: 'left-wall gap: 17 above, floor, 5 below. Looks right in sample_room_dungeon.png'
+- id: 16
+  name: stone_opening_right
+  kind: door
+  themes: [dungeon]
+  blocking: false
+  footprint: [1, 3]
+  parts: [16, 48, 4]
+  tags: [entrance, opening, 'on:right', 'set:dungeon_stone']
+  confidence: high
+  note: 'right-wall gap: 16 above, floor, 4 below. Looks right in sample_room_dungeon.png'
+- id: 6
+  name: stone_pillar_in_wall
+  kind: decor
+  themes: [dungeon]
+  blocking: true
+  footprint: [1, 2]
+  parts: [6, 18]
+  tags: [decoration, wall_mounted, 'on:top']
+  confidence: high
+  note: 6 on rim row, 18 on face row; floor 30 below
+- id: 29
+  name: red_banner_on_wall
+  kind: decor
+  themes: [dungeon]
+  blocking: true
+  tags: [decoration, wall_mounted, 'on:top']
+  confidence: high
+  note: brick face cell with a red shield banner; can replace a face cell
+- id: 7
+  name: gargoyle_fountain_dry
+  kind: decor
+  themes: [dungeon]
+  blocking: true
+  footprint: [1, 3]
+  parts: [7, 19, 31]
+  tags: [decoration, wall_mounted, 'on:top', water_source]
+  confidence: medium
+  note: rim row / face row / floor-row basin. Sample map only uses 19+31
+- id: 8
+  name: gargoyle_fountain_flowing
+  kind: decor
+  themes: [dungeon]
+  blocking: true
+  footprint: [1, 3]
+  parts: [8, 20, 32]
+  tags: [decoration, wall_mounted, 'on:top', water_source]
+  confidence: medium
+  note: green liquid. Sample map only uses 20+32
+- id: 36
+  name: stone_stairs_wide
+  kind: object
+  themes: [dungeon]
+  blocking: false
+  footprint: [3, 1]
+  parts: [36, 37, 38]
+  tags: [exit, stairs]
+  confidence: medium
+  note: 37 can repeat for wider stairs (sample uses 36,37x5,38)
+- id: 39
+  name: stone_stairs_single
+  kind: object
+  themes: [dungeon]
+  blocking: false
+  tags: [exit, stairs]
+  confidence: medium
+- id: 63
+  name: bookshelf_tall
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  footprint: [1, 2]
+  parts: [63, 75]
+  tags: [storage, furniture]
+  confidence: medium
+  note: sample places 63 on the face row and 75 on the floor row below (against top wall)
+- id: 72
+  name: wooden_table
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [surface, furniture]
+  confidence: high
+- id: 73
+  name: wooden_stool
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [seating, furniture]
+  confidence: high
+- id: 74
+  name: anvil
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [crafting, obstacle]
+  confidence: high
+- id: 82
+  name: wooden_barrel
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [storage, obstacle]
+  confidence: high
+- id: 89
+  name: chest_closed
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [storage, loot]
+  confidence: high
+- id: 90
+  name: chest_half_open
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [storage, loot]
+  confidence: medium
+  note: similar to 89/91; subtle differences (lid shape), exact state unclear
+- id: 91
+  name: chest_open
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [storage, loot]
+  confidence: medium
+  note: looks like 90 with darker interior; may be 'open' or just a variant
+- id: 92
+  name: mimic_chest
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [enemy, loot]
+  confidence: high
+  note: chest with teeth and tongue
+- id: 64
+  name: grave_cross
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  footprint: [1, 2]
+  parts: [64, 66]
+  tags: [decoration, obstacle]
+  confidence: high
+  note: cross headstone above dirt mound (sample map)
+- id: 65
+  name: grave_headstone
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  footprint: [1, 2]
+  parts: [65, 66]
+  tags: [decoration, obstacle]
+  confidence: high
+  note: square headstone above dirt mound (sample map)
+- id: 41
+  name: spike_statue
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [obstacle, decoration]
+  confidence: low
+  note: grey spiky thing on a stone base; could be a spike trap, altar or crown statue
+- id: 54
+  name: mine_cart_side
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [storage, vehicle]
+  confidence: medium
+  note: minecart seen from side; sits on rails
+- id: 55
+  name: mine_cart_front
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [storage, vehicle]
+  confidence: medium
+- id: 56
+  name: mine_cart_rotated
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  tags: [obstacle, vehicle]
+  confidence: low
+  note: rotated / tipped cart?
+- id: 76
+  name: iron_fence_left
+  kind: object
+  themes: [dungeon]
+  blocking: true
+  footprint: [3, 1]
+  parts: [76, 77, 78]
+  tags: [obstacle, barrier]
+  confidence: medium
+  note: iron bars/railing; 77 repeats. Sample uses 77 alone across a corridor
+- id: 12
+  name: rocks_on_dirt
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration]
+  confidence: high
+  note: on dirt background (tile 0)
+- id: 24
+  name: rubble_on_dirt
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration]
+  confidence: high
+  note: on dirt background (tile 0)
+- id: 81
+  name: rail_vertical
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: medium
+  note: minecart track piece; exact connection roles unverified
+- id: 70
+  name: rail_horizontal
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: medium
+  note: minecart track piece; exact connection roles unverified
+- id: 69
+  name: rail_curve_tl
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: medium
+  note: minecart track piece; exact connection roles unverified
+- id: 71
+  name: rail_curve_tr
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: medium
+  note: minecart track piece; exact connection roles unverified
+- id: 93
+  name: rail_curve_bl
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: medium
+  note: minecart track piece; exact connection roles unverified
+- id: 95
+  name: rail_curve_br
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: medium
+  note: minecart track piece; exact connection roles unverified
+- id: 67
+  name: rail_end_a
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: low
+  note: minecart track piece; exact connection roles unverified
+- id: 68
+  name: rail_end_b
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: low
+  note: minecart track piece; exact connection roles unverified
+- id: 79
+  name: rail_horizontal_b
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: low
+  note: minecart track piece; exact connection roles unverified
+- id: 80
+  name: rail_horizontal_c
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: low
+  note: minecart track piece; exact connection roles unverified
+- id: 83
+  name: rail_vertical_b
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: low
+  note: minecart track piece; exact connection roles unverified
+- id: 94
+  name: rail_horizontal_d
+  kind: decor
+  themes: [dungeon]
+  blocking: false
+  tags: [decoration, track]
+  confidence: low
+  note: minecart track piece; exact connection roles unverified
+- id: 84
+  name: wizard
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [npc]
+  confidence: high
+- id: 85
+  name: adventurer_a
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [npc]
+  confidence: high
+- id: 86
+  name: bald_warrior
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [npc]
+  confidence: medium
+- id: 87
+  name: viking_warrior
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [npc]
+  confidence: high
+- id: 88
+  name: barbarian
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [npc]
+  confidence: medium
+- id: 96
+  name: knight_helmet
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [npc]
+  confidence: high
+- id: 97
+  name: knight_visor
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [npc]
+  confidence: high
+- id: 98
+  name: squire
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [npc]
+  confidence: high
+- id: 99
+  name: princess
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [npc]
+  confidence: high
+- id: 100
+  name: old_man
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [npc]
+  confidence: high
+- id: 108
+  name: green_slime_ghost
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [enemy]
+  confidence: medium
+- id: 109
+  name: cyclops
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [enemy]
+  confidence: high
+- id: 110
+  name: red_crab_demon
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [enemy]
+  confidence: medium
+- id: 111
+  name: hooded_bandit
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [enemy]
+  confidence: high
+- id: 112
+  name: ranger
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [npc]
+  confidence: medium
+- id: 120
+  name: bat
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [enemy]
+  confidence: high
+- id: 121
+  name: ghost
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [enemy]
+  confidence: high
+- id: 122
+  name: spider
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [enemy]
+  confidence: high
+- id: 123
+  name: rat
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [enemy]
+  confidence: medium
+- id: 124
+  name: grey_rat
+  kind: character
+  themes: [dungeon]
+  blocking: false
+  tags: [enemy]
+  confidence: medium
+- id: 101
+  name: ring
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: low
+- id: 102
+  name: round_shield
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 103
+  name: dagger
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: high
+- id: 104
+  name: short_sword
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: high
+- id: 105
+  name: cleaver
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 106
+  name: broadsword
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: high
+- id: 107
+  name: wooden_sword
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 113
+  name: potion_grey
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: high
+- id: 114
+  name: potion_green
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: high
+- id: 115
+  name: potion_red
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: high
+- id: 116
+  name: potion_blue
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: high
+- id: 117
+  name: war_hammer
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: high
+- id: 118
+  name: double_axe
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: high
+- id: 119
+  name: axe
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: high
+- id: 125
+  name: vial_empty
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 126
+  name: vial_green
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 127
+  name: vial_red
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 128
+  name: vial_blue
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 129
+  name: wand_purple
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 130
+  name: staff_blue
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 131
+  name: spear
+  kind: item
+  themes: [dungeon]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 132
+  name: grass
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, primary, 'set:wood_fence', 'set:castle_rampart_outside']
+  confidence: high
+- id: 133
+  name: grass_tufts
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, 'set:wood_fence']
+  confidence: high
+- id: 134
+  name: grass_flowers
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, decoration, 'set:wood_fence']
+  confidence: high
+- id: 175
+  name: grass_stepping_stones
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, 'set:wood_fence']
+  confidence: high
+- id: 157
+  name: dirt_path
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path]
+  confidence: high
+- id: 144
+  name: dirt_patch_tl
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: medium
+  note: grass-to-dirt edge piece of the 3x3 dirt patch (157 = centre)
+- id: 145
+  name: dirt_patch_t
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: medium
+  note: grass-to-dirt edge piece of the 3x3 dirt patch (157 = centre)
+- id: 146
+  name: dirt_patch_tr
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: medium
+  note: grass-to-dirt edge piece of the 3x3 dirt patch (157 = centre)
+- id: 156
+  name: dirt_patch_l
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: medium
+  note: grass-to-dirt edge piece of the 3x3 dirt patch (157 = centre)
+- id: 158
+  name: dirt_patch_r
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: medium
+  note: grass-to-dirt edge piece of the 3x3 dirt patch (157 = centre)
+- id: 168
+  name: dirt_patch_bl
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: medium
+  note: grass-to-dirt edge piece of the 3x3 dirt patch (157 = centre)
+- id: 169
+  name: dirt_patch_b
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: medium
+  note: grass-to-dirt edge piece of the 3x3 dirt patch (157 = centre)
+- id: 170
+  name: dirt_patch_br
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: medium
+  note: grass-to-dirt edge piece of the 3x3 dirt patch (157 = centre)
+- id: 171
+  name: dirt_grass_inner_a
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: low
+  note: dirt with a small grass corner; probably inner corners of the dirt patch, orientation unverified
+- id: 172
+  name: dirt_grass_inner_b
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: low
+  note: dirt with a small grass corner; probably inner corners of the dirt patch, orientation unverified
+- id: 173
+  name: dirt_grass_inner_c
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: low
+  note: dirt with a small grass corner; probably inner corners of the dirt patch, orientation unverified
+- id: 174
+  name: dirt_grass_inner_d
+  kind: floor
+  themes: [town, farm]
+  blocking: false
+  tags: [ground, path, edge]
+  confidence: low
+  note: dirt with a small grass corner; probably inner corners of the dirt patch, orientation unverified
+- id: 177
+  name: fence_top
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  wall_role: top
+  tags: [structure, 'set:wood_fence']
+  confidence: high
+  note: horizontal rail with post
+- id: 213
+  name: fence_horizontal
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  wall_role: bottom
+  tags: [structure, 'set:wood_fence']
+  confidence: high
+  note: horizontal rail, no post; also usable on top edge
+- id: 176
+  name: fence_corner_tl
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  wall_role: corner_tl
+  tags: [structure, 'set:wood_fence']
+  confidence: high
+- id: 178
+  name: fence_corner_tr
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  wall_role: corner_tr
+  tags: [structure, 'set:wood_fence']
+  confidence: high
+- id: 200
+  name: fence_corner_bl
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  wall_role: corner_bl
+  tags: [structure, 'set:wood_fence']
+  confidence: high
+- id: 202
+  name: fence_corner_br
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  wall_role: corner_br
+  tags: [structure, 'set:wood_fence']
+  confidence: high
+- id: 188
+  name: fence_left
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  wall_role: left
+  tags: [structure, 'set:wood_fence']
+  confidence: high
+- id: 190
+  name: fence_right
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  wall_role: right
+  tags: [structure, 'set:wood_fence']
+  confidence: high
+- id: 191
+  name: fence_vertical
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  tags: [structure, 'set:wood_fence']
+  confidence: medium
+  note: centred vertical fence; alternative for left/right
+- id: 212
+  name: fence_end_left
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  tags: [structure, 'set:wood_fence', end_cap]
+  confidence: high
+  note: horizontal run ends here (post)
+- id: 214
+  name: fence_end_right
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  tags: [structure, 'set:wood_fence', end_cap]
+  confidence: high
+- id: 179
+  name: fence_end_top
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  tags: [structure, 'set:wood_fence', end_cap]
+  confidence: high
+  note: vertical run ends here (post)
+- id: 203
+  name: fence_end_bottom
+  kind: wall
+  themes: [town, farm]
+  blocking: true
+  tags: [structure, 'set:wood_fence', end_cap]
+  confidence: high
+- id: 201
+  name: fence_gate_gap
+  kind: door
+  themes: [town, farm]
+  blocking: false
+  tags: [entrance, 'on:bottom', 'on:top', 'set:wood_fence']
+  confidence: high
+  note: two post ends facing each other = walkable gap in a horizontal fence
+- id: 214
+  name: fence_opening_horizontal
+  kind: door
+  themes: [town, farm]
+  blocking: false
+  footprint: [3, 1]
+  parts: [214, 132, 212]
+  tags: [entrance, opening, 'on:top', 'on:bottom', 'set:wood_fence']
+  confidence: high
+  note: 'gap in horizontal fence: right-end cap | grass | left-end cap'
+- id: 203
+  name: fence_opening_vertical
+  kind: door
+  themes: [town, farm]
+  blocking: false
+  footprint: [1, 3]
+  parts: [203, 132, 179]
+  tags: [entrance, opening, 'on:left', 'on:right', 'set:wood_fence']
+  confidence: high
+  note: 'gap in vertical fence: bottom-end cap | grass | top-end cap. Verified in sample_room_town.png'
+- id: 228
+  name: castle_rampart_corner_tl
+  kind: wall
+  themes: [town]
+  blocking: true
+  wall_role: corner_tl
+  tags: [structure, 'set:castle_rampart']
+  confidence: medium
+  note: crenellated stone parapet seen from above; edge cells include some floor
+- id: 229
+  name: castle_rampart_top
+  kind: wall
+  themes: [town]
+  blocking: true
+  wall_role: top
+  tags: [structure, 'set:castle_rampart']
+  confidence: medium
+  note: crenellated stone parapet seen from above; edge cells include some floor
+- id: 230
+  name: castle_rampart_corner_tr
+  kind: wall
+  themes: [town]
+  blocking: true
+  wall_role: corner_tr
+  tags: [structure, 'set:castle_rampart']
+  confidence: medium
+  note: crenellated stone parapet seen from above; edge cells include some floor
+- id: 240
+  name: castle_rampart_left
+  kind: wall
+  themes: [town]
+  blocking: true
+  wall_role: left
+  tags: [structure, 'set:castle_rampart']
+  confidence: medium
+  note: crenellated stone parapet seen from above; edge cells include some floor
+- id: 242
+  name: castle_rampart_right
+  kind: wall
+  themes: [town]
+  blocking: true
+  wall_role: right
+  tags: [structure, 'set:castle_rampart']
+  confidence: medium
+  note: crenellated stone parapet seen from above; edge cells include some floor
+- id: 252
+  name: castle_rampart_corner_bl
+  kind: wall
+  themes: [town]
+  blocking: true
+  wall_role: corner_bl
+  tags: [structure, 'set:castle_rampart']
+  confidence: medium
+  note: crenellated stone parapet seen from above; edge cells include some floor
+- id: 253
+  name: castle_rampart_bottom
+  kind: wall
+  themes: [town]
+  blocking: true
+  wall_role: bottom
+  tags: [structure, 'set:castle_rampart']
+  confidence: medium
+  note: crenellated stone parapet seen from above; edge cells include some floor
+- id: 254
+  name: castle_rampart_corner_br
+  kind: wall
+  themes: [town]
+  blocking: true
+  wall_role: corner_br
+  tags: [structure, 'set:castle_rampart']
+  confidence: medium
+  note: crenellated stone parapet seen from above; edge cells include some floor
+- id: 241
+  name: castle_rampart_floor
+  kind: floor
+  themes: [town]
+  blocking: false
+  tags: [ground, primary, 'set:castle_rampart']
+  confidence: high
+- id: 231
+  name: castle_wall_top_left
+  kind: wall
+  themes: [town]
+  blocking: true
+  footprint: [3, 1]
+  parts: [231, 232, 233]
+  tags: [structure]
+  confidence: low
+  note: horizontal battlement wall walkway; role unclear
+- id: 135
+  name: tree_tall_orange
+  kind: object
+  themes: [town]
+  blocking: true
+  footprint: [1, 2]
+  parts: [135, 147]
+  tags: [obstacle, nature]
+  confidence: high
+- id: 136
+  name: tree_tall_green
+  kind: object
+  themes: [town, farm]
+  blocking: true
+  footprint: [1, 2]
+  parts: [136, 148]
+  tags: [obstacle, nature]
+  confidence: high
+- id: 159
+  name: tree_small_orange
+  kind: object
+  themes: [town]
+  blocking: true
+  tags: [obstacle, nature]
+  confidence: high
+- id: 160
+  name: tree_small_green
+  kind: object
+  themes: [town, farm]
+  blocking: true
+  tags: [obstacle, nature]
+  confidence: high
+- id: 137
+  name: bush_round
+  kind: object
+  themes: [town, farm]
+  blocking: true
+  tags: [obstacle, nature]
+  confidence: high
+- id: 149
+  name: sprout_plant
+  kind: decor
+  themes: [town, farm]
+  blocking: false
+  tags: [decoration, nature]
+  confidence: medium
+- id: 161
+  name: mushrooms_red
+  kind: decor
+  themes: [town, farm]
+  blocking: false
+  tags: [decoration, nature]
+  confidence: high
+- id: 224
+  name: well
+  kind: object
+  themes: [town]
+  blocking: true
+  footprint: [1, 2]
+  parts: [224, 236]
+  tags: [water_source, obstacle]
+  confidence: medium
+  note: 224 = roof, 236 = stone well with water (matches Sample.png)
+- id: 226
+  name: beehive
+  kind: object
+  themes: [town, farm]
+  blocking: true
+  tags: [obstacle, nature]
+  confidence: high
+  note: as in Sample.png
+- id: 227
+  name: archery_target
+  kind: object
+  themes: [town]
+  blocking: true
+  tags: [training, obstacle]
+  confidence: high
+- id: 215
+  name: signpost
+  kind: object
+  themes: [town]
+  blocking: true
+  tags: [information]
+  confidence: high
+- id: 189
+  name: notice_board
+  kind: object
+  themes: [town]
+  blocking: true
+  tags: [information]
+  confidence: low
+  note: brown board with a round metal part; could be a cart or a shop sign
+- id: 262
+  name: wooden_bucket_empty
+  kind: object
+  themes: [town, farm]
+  blocking: false
+  tags: [storage]
+  confidence: medium
+- id: 263
+  name: wooden_bucket_water
+  kind: object
+  themes: [town, farm]
+  blocking: false
+  tags: [storage, water_source]
+  confidence: medium
+- id: 239
+  name: wooden_tub
+  kind: object
+  themes: [town]
+  blocking: true
+  tags: [storage]
+  confidence: low
+  note: brown open container with lid; barrel/tub/chest unclear
+- id: 238
+  name: log
+  kind: object
+  themes: [town, farm]
+  blocking: true
+  tags: [obstacle, resource]
+  confidence: medium
+- id: 225
+  name: hay_or_gold_coin
+  kind: item
+  themes: [town]
+  blocking: false
+  tags: [pickup]
+  confidence: low
+  note: 'yellow oval with pattern: gold coin, hay or loaf – unclear'
+- id: 237
+  name: bomb
+  kind: item
+  themes: [town]
+  blocking: false
+  tags: [pickup, weapon]
+  confidence: low
+  note: dark sphere with a curly fuse; could also be a ball and chain
+- id: 247
+  name: pickaxe
+  kind: item
+  themes: [town]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: high
+- id: 248
+  name: pitchfork
+  kind: item
+  themes: [town]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: high
+- id: 249
+  name: key
+  kind: item
+  themes: [town]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: high
+- id: 250
+  name: bow
+  kind: item
+  themes: [town]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: high
+- id: 251
+  name: arrow
+  kind: item
+  themes: [town]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: medium
+- id: 259
+  name: axe_town
+  kind: item
+  themes: [town]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: high
+- id: 260
+  name: hammer
+  kind: item
+  themes: [town]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: medium
+- id: 261
+  name: hoe
+  kind: item
+  themes: [town]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: medium
+- id: 246
+  name: scythe_or_bow
+  kind: item
+  themes: [town]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: low
+- id: 258
+  name: stone_brick_wall
+  kind: wall
+  themes: [town]
+  blocking: true
+  tags: [structure]
+  confidence: medium
+  note: plain grey brick; castle facade filler, no matching edges for a room
+- id: 264
+  name: tilled_soil_single
+  kind: floor
+  themes: [farm]
+  blocking: false
+  tags: [ground, farmland]
+  confidence: medium
+  note: round dry soil patch on grass
+- id: 265
+  name: tilled_soil_single_wet
+  kind: floor
+  themes: [farm]
+  blocking: false
+  tags: [ground, farmland]
+  confidence: medium
+- id: 276
+  name: tilled_row_vertical_dry
+  kind: decor
+  themes: [farm]
+  blocking: false
+  footprint: [1, 3]
+  parts: [276, 288, 300]
+  tags: [farmland]
+  confidence: medium
+  note: 288 repeats for longer rows
+- id: 277
+  name: tilled_row_vertical_wet
+  kind: decor
+  themes: [farm]
+  blocking: false
+  footprint: [1, 3]
+  parts: [277, 289, 301]
+  tags: [farmland]
+  confidence: medium
+- id: 324
+  name: tilled_row_horizontal_dry
+  kind: decor
+  themes: [farm]
+  blocking: false
+  footprint: [4, 1]
+  parts: [324, 325, 326, 327]
+  tags: [farmland]
+  confidence: medium
+  note: 325/326 middle pieces
+- id: 312
+  name: tilled_row_horizontal_wet
+  kind: decor
+  themes: [farm]
+  blocking: false
+  footprint: [4, 1]
+  parts: [312, 313, 314, 315]
+  tags: [farmland]
+  confidence: medium
+- id: 267
+  name: pine_tree_tall
+  kind: object
+  themes: [farm]
+  blocking: true
+  footprint: [1, 2]
+  parts: [267, 279]
+  tags: [obstacle, nature]
+  confidence: high
+- id: 291
+  name: pine_tree_small
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [obstacle, nature]
+  confidence: high
+- id: 303
+  name: bush_farm
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [obstacle, nature]
+  confidence: high
+- id: 266
+  name: dead_tree_tall
+  kind: object
+  themes: [farm]
+  blocking: true
+  footprint: [1, 2]
+  parts: [266, 278]
+  tags: [obstacle, nature]
+  confidence: medium
+- id: 290
+  name: dead_tree_small
+  kind: object
+  themes: [farm]
+  blocking: true
+  footprint: [1, 2]
+  parts: [290, 302]
+  tags: [obstacle, nature]
+  confidence: medium
+- id: 342
+  name: berry_bush
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [obstacle, nature, food]
+  confidence: high
+- id: 347
+  name: sunflower
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [decoration, nature]
+  confidence: high
+- id: 344
+  name: weeds
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [decoration, nature]
+  confidence: medium
+- id: 345
+  name: sapling
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [decoration, nature]
+  confidence: low
+- id: 341
+  name: small_rocks
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [decoration]
+  confidence: high
+- id: 353
+  name: boulder
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [obstacle]
+  confidence: high
+- id: 268
+  name: carrot_crop_stage1
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 269
+  name: carrot_crop_stage2
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 270
+  name: carrot_crop_stage3
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 272
+  name: carrot
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, food]
+  confidence: high
+- id: 273
+  name: carrot_seed_sack
+  kind: object
+  themes: [farm]
+  blocking: false
+  tags: [storage]
+  confidence: medium
+- id: 274
+  name: carrot_seed_packet
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 275
+  name: carrot_crate
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [storage, food]
+  confidence: high
+- id: 280
+  name: turnip_crop_stage1
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 281
+  name: turnip_crop_stage2
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 282
+  name: turnip_crop_stage3
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 284
+  name: turnip
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, food]
+  confidence: medium
+- id: 285
+  name: turnip_seed_sack
+  kind: object
+  themes: [farm]
+  blocking: false
+  tags: [storage]
+  confidence: medium
+- id: 286
+  name: turnip_seed_packet
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 287
+  name: turnip_crate
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [storage, food]
+  confidence: high
+- id: 292
+  name: corn_crop_stage1
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 293
+  name: corn_crop_stage2
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 294
+  name: corn_crop_stage3
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 296
+  name: corn
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, food]
+  confidence: high
+- id: 297
+  name: corn_seed_sack
+  kind: object
+  themes: [farm]
+  blocking: false
+  tags: [storage]
+  confidence: medium
+- id: 298
+  name: corn_seed_packet
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 299
+  name: corn_crate
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [storage, food]
+  confidence: high
+- id: 304
+  name: tomato_crop_stage1
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 305
+  name: tomato_crop_stage2
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 306
+  name: tomato_crop_stage3
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 308
+  name: tomato
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, food]
+  confidence: high
+- id: 309
+  name: tomato_seed_sack
+  kind: object
+  themes: [farm]
+  blocking: false
+  tags: [storage]
+  confidence: medium
+- id: 310
+  name: tomato_seed_packet
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 311
+  name: tomato_crate
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [storage, food]
+  confidence: high
+- id: 316
+  name: cabbage_crop_stage1
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 317
+  name: cabbage_crop_stage2
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 318
+  name: cabbage_crop_stage3
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 320
+  name: cabbage
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, food]
+  confidence: medium
+- id: 321
+  name: cabbage_seed_sack
+  kind: object
+  themes: [farm]
+  blocking: false
+  tags: [storage]
+  confidence: medium
+- id: 322
+  name: cabbage_seed_packet
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 323
+  name: cabbage_crate
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [storage, food]
+  confidence: high
+- id: 328
+  name: wheat_crop_stage1
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 329
+  name: wheat_crop_stage2
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 330
+  name: wheat_crop_stage3
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop, nature]
+  confidence: medium
+  note: growth stage order assumed left→right
+- id: 332
+  name: wheat
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, food]
+  confidence: high
+- id: 333
+  name: wheat_seed_sack
+  kind: object
+  themes: [farm]
+  blocking: false
+  tags: [storage]
+  confidence: medium
+- id: 334
+  name: wheat_seed_packet
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup]
+  confidence: medium
+- id: 335
+  name: wheat_crate
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [storage, food]
+  confidence: high
+- id: 271
+  name: withered_crop_a
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop]
+  confidence: low
+  note: pale/brown version of the crop; could be dead crop or dried harvest
+- id: 283
+  name: withered_crop_b
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop]
+  confidence: low
+  note: pale/brown version of the crop; could be dead crop or dried harvest
+- id: 295
+  name: withered_corn
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop]
+  confidence: low
+  note: pale/brown version of the crop; could be dead crop or dried harvest
+- id: 307
+  name: withered_tomato
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop]
+  confidence: low
+  note: pale/brown version of the crop; could be dead crop or dried harvest
+- id: 319
+  name: withered_cabbage
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop]
+  confidence: low
+  note: pale/brown version of the crop; could be dead crop or dried harvest
+- id: 331
+  name: withered_wheat
+  kind: decor
+  themes: [farm]
+  blocking: false
+  tags: [crop]
+  confidence: low
+  note: pale/brown version of the crop; could be dead crop or dried harvest
+- id: 360
+  name: hay_bale
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [obstacle, storage]
+  confidence: high
+- id: 361
+  name: hay_bale_strapped
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [obstacle, storage]
+  confidence: medium
+- id: 362
+  name: wooden_trough_empty
+  kind: object
+  themes: [farm]
+  blocking: true
+  footprint: [2, 1]
+  parts: [362, 363]
+  tags: [animal, surface]
+  confidence: high
+- id: 374
+  name: wooden_trough_water
+  kind: object
+  themes: [farm]
+  blocking: true
+  footprint: [2, 1]
+  parts: [374, 375]
+  tags: [animal, water_source]
+  confidence: high
+- id: 364
+  name: metal_trough_empty
+  kind: object
+  themes: [farm]
+  blocking: true
+  footprint: [2, 1]
+  parts: [364, 365]
+  tags: [animal, surface]
+  confidence: high
+- id: 376
+  name: metal_trough_feed
+  kind: object
+  themes: [farm]
+  blocking: true
+  footprint: [2, 1]
+  parts: [376, 377]
+  tags: [animal, food]
+  confidence: high
+  note: as in Sample.png (top right)
+- id: 349
+  name: farm_barrel
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [storage, obstacle]
+  confidence: high
+- id: 336
+  name: bucket_empty
+  kind: object
+  themes: [farm]
+  blocking: false
+  tags: [storage]
+  confidence: medium
+- id: 337
+  name: bucket_water
+  kind: object
+  themes: [farm]
+  blocking: false
+  tags: [storage, water_source]
+  confidence: medium
+- id: 338
+  name: flour_sack
+  kind: object
+  themes: [farm]
+  blocking: false
+  tags: [storage]
+  confidence: medium
+- id: 339
+  name: wicker_basket
+  kind: object
+  themes: [farm]
+  blocking: false
+  tags: [storage]
+  confidence: low
+- id: 340
+  name: wooden_crate_open
+  kind: object
+  themes: [farm]
+  blocking: true
+  tags: [storage]
+  confidence: low
+  note: could also be a wooden chair seen from front
+- id: 388
+  name: egg_basket
+  kind: object
+  themes: [farm]
+  blocking: false
+  tags: [storage, food]
+  confidence: low
+- id: 387
+  name: milk_jug
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, food]
+  confidence: low
+- id: 389
+  name: egg
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, food]
+  confidence: medium
+- id: 348
+  name: watering_can
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: high
+- id: 350
+  name: shovel
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: medium
+- id: 351
+  name: axe_farm
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: high
+- id: 352
+  name: sickle
+  kind: item
+  themes: [farm]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: high
+- id: 372
+  name: farmer
+  kind: character
+  themes: [farm]
+  blocking: false
+  tags: [npc]
+  confidence: high
+- id: 373
+  name: farmer_hat
+  kind: character
+  themes: [farm]
+  blocking: false
+  tags: [npc]
+  confidence: high
+- id: 384
+  name: sheep
+  kind: character
+  themes: [farm]
+  blocking: false
+  tags: [animal]
+  confidence: high
+- id: 385
+  name: cow
+  kind: character
+  themes: [farm]
+  blocking: false
+  tags: [animal]
+  confidence: high
+- id: 386
+  name: chicken
+  kind: character
+  themes: [farm]
+  blocking: false
+  tags: [animal]
+  confidence: high
+- id: 396
+  name: factory_floor
+  kind: floor
+  themes: [factory]
+  blocking: false
+  tags: [ground, primary, 'set:factory_metal']
+  confidence: high
+- id: 397
+  name: factory_floor_checker
+  kind: floor
+  themes: [factory]
+  blocking: false
+  tags: [ground, 'set:factory_metal']
+  confidence: high
+- id: 398
+  name: factory_floor_striped
+  kind: floor
+  themes: [factory]
+  blocking: false
+  tags: [ground, 'set:factory_metal']
+  confidence: medium
+  note: diagonal stripes, same palette as 396
+- id: 399
+  name: factory_outside_ground
+  kind: floor
+  themes: [factory]
+  blocking: false
+  tags: [ground, outside, 'set:factory_metal']
+  confidence: high
+  note: dark ground used outside the walls
+- id: 428
+  name: factory_outside_debris
+  kind: floor
+  themes: [factory]
+  blocking: false
+  tags: [ground, outside]
+  confidence: medium
+- id: 406
+  name: metal_wall_top
+  kind: wall
+  themes: [factory]
+  blocking: true
+  footprint: [1, 2]
+  parts: [406, 442]
+  wall_role: top
+  tags: [structure, 'set:factory_metal']
+  confidence: high
+  note: '2 cells tall like dungeon: rim (406) over panel face (442). Verified in sample_room_factory.png'
+- id: 405
+  name: metal_wall_corner_tl
+  kind: wall
+  themes: [factory]
+  blocking: true
+  footprint: [1, 2]
+  parts: [405, 417]
+  wall_role: corner_tl
+  tags: [structure, 'set:factory_metal']
+  confidence: high
+- id: 407
+  name: metal_wall_corner_tr
+  kind: wall
+  themes: [factory]
+  blocking: true
+  footprint: [1, 2]
+  parts: [407, 419]
+  wall_role: corner_tr
+  tags: [structure, 'set:factory_metal']
+  confidence: high
+- id: 417
+  name: metal_wall_left
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: left
+  tags: [structure, 'set:factory_metal']
+  confidence: high
+- id: 419
+  name: metal_wall_right
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: right
+  tags: [structure, 'set:factory_metal']
+  confidence: high
+- id: 430
+  name: metal_wall_bottom
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: bottom
+  tags: [structure, 'set:factory_metal']
+  confidence: high
+- id: 429
+  name: metal_wall_corner_bl
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: corner_bl
+  tags: [structure, 'set:factory_metal']
+  confidence: high
+- id: 431
+  name: metal_wall_corner_br
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: corner_br
+  tags: [structure, 'set:factory_metal']
+  confidence: high
+- id: 442
+  name: metal_wall_face
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: face
+  tags: [structure, 'set:factory_metal', primary]
+  confidence: high
+  note: grey panel with orange stripe; seamless middle piece
+- id: 440
+  name: metal_wall_face_end_left
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: face
+  tags: [structure, 'set:factory_metal', face_end_left]
+  confidence: high
+  note: 'framed on its left side: first cell of a face run'
+- id: 443
+  name: metal_wall_face_end_right
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: face
+  tags: [structure, 'set:factory_metal', face_end_right]
+  confidence: high
+  note: 'framed on its right side: last cell of a face run'
+- id: 441
+  name: metal_wall_face_single
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: face
+  tags: [structure, 'set:factory_metal', face_single]
+  confidence: high
+  note: 'framed on both sides: 1-wide face run'
+- id: 418
+  name: metal_wall_block
+  kind: wall
+  themes: [factory]
+  blocking: true
+  tags: [structure, 'set:factory_metal']
+  confidence: low
+  note: centre of demo 3x3 block
+- id: 403
+  name: metal_wall_inner_corner_tl
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: inner_corner_tl
+  tags: [structure, 'set:factory_metal']
+  confidence: medium
+- id: 404
+  name: metal_wall_inner_corner_tr
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: inner_corner_tr
+  tags: [structure, 'set:factory_metal']
+  confidence: medium
+- id: 415
+  name: metal_wall_inner_corner_bl
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: inner_corner_bl
+  tags: [structure, 'set:factory_metal']
+  confidence: medium
+- id: 416
+  name: metal_wall_inner_corner_br
+  kind: wall
+  themes: [factory]
+  blocking: true
+  wall_role: inner_corner_br
+  tags: [structure, 'set:factory_metal']
+  confidence: medium
+- id: 453
+  name: metal_door_closed
+  kind: door
+  themes: [factory]
+  blocking: false
+  tags: [entrance, 'on:top', 'set:factory_metal']
+  confidence: high
+  note: replaces one face-row cell
+- id: 454
+  name: metal_double_door_closed
+  kind: door
+  themes: [factory]
+  blocking: false
+  footprint: [2, 1]
+  parts: [454, 455]
+  tags: [entrance, 'on:top', 'set:factory_metal']
+  confidence: medium
+- id: 465
+  name: metal_doorway_open
+  kind: door
+  themes: [factory]
+  blocking: false
+  tags: [entrance, 'on:top', 'set:factory_metal']
+  confidence: medium
+  note: dark open doorway with stairs/grate at bottom
+- id: 466
+  name: metal_doorway_wide
+  kind: door
+  themes: [factory]
+  blocking: false
+  footprint: [2, 1]
+  parts: [466, 467]
+  tags: [entrance, 'on:top', 'set:factory_metal']
+  confidence: medium
+- id: 404
+  name: metal_opening_bottom
+  kind: door
+  themes: [factory]
+  blocking: false
+  footprint: [3, 1]
+  parts: [404, 396, 403]
+  tags: [entrance, opening, 'on:bottom', 'set:factory_metal']
+  confidence: high
+  note: by analogy with dungeon 5|floor|4; looks right in sample_room_factory.png
+- id: 450
+  name: work_table_long
+  kind: object
+  themes: [factory]
+  blocking: true
+  footprint: [3, 1]
+  parts: [450, 451, 452]
+  tags: [surface, furniture]
+  confidence: high
+- id: 402
+  name: work_table_small
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [surface, furniture]
+  confidence: medium
+- id: 462
+  name: work_table_end_left
+  kind: object
+  themes: [factory]
+  blocking: true
+  footprint: [2, 1]
+  parts: [462, 463]
+  tags: [surface, furniture]
+  confidence: low
+  note: looks like a 2-wide table cut at left edge
+- id: 426
+  name: metal_railing_frame
+  kind: object
+  themes: [factory]
+  blocking: true
+  footprint: [2, 2]
+  parts: [426, 427, 438, 439]
+  tags: [barrier, obstacle]
+  confidence: low
+  note: 2x2 rectangular metal frame; railing or hatch
+- id: 469
+  name: cardboard_box_stack
+  kind: object
+  themes: [factory]
+  blocking: true
+  footprint: [1, 2]
+  parts: [469, 481]
+  tags: [storage, obstacle]
+  confidence: medium
+  note: Sample.png shows boxes stacked 2 tall
+- id: 493
+  name: cardboard_box
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [storage, obstacle]
+  confidence: high
+- id: 505
+  name: cardboard_box_open
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [storage]
+  confidence: medium
+- id: 468
+  name: server_cabinet
+  kind: object
+  themes: [factory]
+  blocking: true
+  footprint: [1, 2]
+  parts: [468, 480]
+  tags: [machine, obstacle]
+  confidence: medium
+- id: 470
+  name: metal_barrel
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [storage, obstacle]
+  confidence: high
+- id: 482
+  name: glass_tank_blue
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: medium
+- id: 492
+  name: metal_canister
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [storage, obstacle]
+  confidence: medium
+- id: 522
+  name: red_gas_tank
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [storage, obstacle, hazard]
+  confidence: medium
+- id: 504
+  name: metal_bin
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [storage]
+  confidence: low
+- id: 471
+  name: machine_red_a
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 472
+  name: machine_red_b
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 473
+  name: machine_red_c
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 483
+  name: machine_orange_a
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 484
+  name: machine_orange_b
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 485
+  name: machine_orange_c
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 495
+  name: machine_green_a
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 496
+  name: machine_green_b
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 497
+  name: machine_green_c
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 507
+  name: machine_blue_a
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 508
+  name: machine_blue_b
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 509
+  name: machine_blue_c
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [machine, obstacle]
+  confidence: low
+  note: coloured machine/terminal; a/b/c differ in bottom panel (maybe front / open / idle)
+- id: 494
+  name: forklift
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [vehicle, obstacle]
+  confidence: low
+- id: 506
+  name: robot_rover
+  kind: character
+  themes: [factory]
+  blocking: false
+  tags: [npc, machine]
+  confidence: high
+- id: 516
+  name: factory_worker
+  kind: character
+  themes: [factory]
+  blocking: false
+  tags: [npc]
+  confidence: high
+- id: 519
+  name: toolbox
+  kind: object
+  themes: [factory]
+  blocking: false
+  tags: [storage, tool]
+  confidence: medium
+- id: 520
+  name: warning_sign
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [information, hazard]
+  confidence: high
+- id: 513
+  name: hazard_barrier_long
+  kind: object
+  themes: [factory]
+  blocking: true
+  footprint: [3, 1]
+  parts: [513, 514, 515]
+  tags: [barrier, hazard]
+  confidence: medium
+- id: 527
+  name: hazard_barrier
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [barrier, hazard]
+  confidence: medium
+- id: 525
+  name: alarm_beacon
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [light_source, hazard]
+  confidence: high
+- id: 510
+  name: gear
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration]
+  confidence: medium
+- id: 521
+  name: pennant_flag
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration]
+  confidence: low
+- id: 526
+  name: blue_crystal_part
+  kind: item
+  themes: [factory]
+  blocking: false
+  tags: [pickup]
+  confidence: low
+- id: 517
+  name: wrench
+  kind: item
+  themes: [factory]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: medium
+- id: 518
+  name: wrench_b
+  kind: item
+  themes: [factory]
+  blocking: false
+  tags: [pickup, tool]
+  confidence: low
+- id: 464
+  name: locker
+  kind: object
+  themes: [factory]
+  blocking: true
+  tags: [storage]
+  confidence: low
+  note: tall grey unit; locker or pillar
+- id: 420
+  name: conveyor_single_right
+  kind: object
+  themes: [factory]
+  blocking: false
+  tags: [machine, conveyor]
+  confidence: medium
+- id: 421
+  name: conveyor_horizontal
+  kind: object
+  themes: [factory]
+  blocking: false
+  footprint: [3, 1]
+  parts: [421, 422, 423]
+  tags: [machine, conveyor]
+  confidence: medium
+  note: 422 repeats; arrows point right
+- id: 400
+  name: conveyor_vertical
+  kind: object
+  themes: [factory]
+  blocking: false
+  footprint: [1, 3]
+  parts: [400, 412, 424]
+  tags: [machine, conveyor]
+  confidence: medium
+  note: arrows point up; 412 repeats
+- id: 445
+  name: conveyor_horizontal_orange
+  kind: object
+  themes: [factory]
+  blocking: false
+  footprint: [3, 1]
+  parts: [445, 446, 447]
+  tags: [machine, conveyor]
+  confidence: low
+  note: orange-framed variant
+- id: 436
+  name: conveyor_vertical_orange
+  kind: object
+  themes: [factory]
+  blocking: false
+  footprint: [1, 3]
+  parts: [436, 448, 460]
+  tags: [machine, conveyor]
+  confidence: low
+- id: 478
+  name: pipe_horizontal
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 489
+  name: pipe_vertical
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 476
+  name: pipe_tee
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 477
+  name: pipe_elbow
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 474
+  name: pipe_end_left
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 479
+  name: pipe_end_right
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 486
+  name: valve_wheel_large
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 487
+  name: valve_wheel_small
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 490
+  name: pipe_valve
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 475
+  name: pipe_bracket_orange
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 491
+  name: pipe_joint_orange
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 488
+  name: pipe_outlet
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 498
+  name: pipe_tank_end
+  kind: decor
+  themes: [factory]
+  blocking: false
+  tags: [decoration, pipe]
+  confidence: low
+  note: pipe network piece; connection roles not verified
+- id: 499
+  name: crane_chain_hook
+  kind: decor
+  themes: [factory]
+  blocking: false
+  footprint: [1, 3]
+  parts: [499, 511, 523]
+  tags: [decoration]
+  confidence: low
+  note: orange trolley on a rail, chain, hook
+- id: 416
+  name: metal_opening_left
+  kind: door
+  themes: [factory]
+  blocking: false
+  footprint: [1, 3]
+  parts: [416, 396, 404]
+  tags: [entrance, opening, 'on:left', 'set:factory_metal']
+  confidence: high
+  note: same shape as the dungeon side opening
+- id: 415
+  name: metal_opening_right
+  kind: door
+  themes: [factory]
+  blocking: false
+  footprint: [1, 3]
+  parts: [415, 396, 403]
+  tags: [entrance, opening, 'on:right', 'set:factory_metal']
+  confidence: high
+  note: same shape as the dungeon side opening

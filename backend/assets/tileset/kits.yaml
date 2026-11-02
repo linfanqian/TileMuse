@@ -1,0 +1,104 @@
+# Which catalog entries each theme uses. Edit this file by hand.
+# Names must exist in catalog.yaml with `confidence: high`.
+# A kit may use tiles from any pack.
+# Doors double as exits, so there is no `exit` tile.
+# No pack has a lamp or torch, so `light` uses the closest match, alarm_beacon.
+
+dungeon:
+  floor: sand_floor_a
+  floor_shadow_top: sand_floor_shadow_top
+  walls:
+    top: stone_wall_top
+    bottom: stone_wall_bottom
+    left: stone_wall_left
+    right: stone_wall_right
+    corner_tl: stone_wall_corner_tl
+    corner_tr: stone_wall_corner_tr
+    corner_bl: stone_wall_corner_bl
+    corner_br: stone_wall_corner_br
+  doors:
+    top: wooden_door_closed
+    bottom: stone_opening_bottom
+    left: stone_opening_left
+    right: stone_opening_right
+  objects:
+    player_spawn: adventurer_a
+    chest: chest_closed
+    guard: knight_visor
+    cover: wooden_barrel
+    key: key
+    light: alarm_beacon
+
+town:
+  floor: grass
+  walls:
+    top: fence_top
+    bottom: fence_horizontal
+    left: fence_left
+    right: fence_right
+    corner_tl: fence_corner_tl
+    corner_tr: fence_corner_tr
+    corner_bl: fence_corner_bl
+    corner_br: fence_corner_br
+  doors:
+    top: fence_opening_horizontal
+    bottom: fence_opening_horizontal
+    left: fence_opening_vertical
+    right: fence_opening_vertical
+  objects:
+    player_spawn: adventurer_a
+    chest: chest_closed
+    guard: knight_visor
+    cover: bush_round
+    key: key
+    light: alarm_beacon
+
+farm:
+  floor: grass
+  walls:
+    top: fence_top
+    bottom: fence_horizontal
+    left: fence_left
+    right: fence_right
+    corner_tl: fence_corner_tl
+    corner_tr: fence_corner_tr
+    corner_bl: fence_corner_bl
+    corner_br: fence_corner_br
+  doors:
+    top: fence_opening_horizontal
+    bottom: fence_opening_horizontal
+    left: fence_opening_vertical
+    right: fence_opening_vertical
+  objects:
+    player_spawn: farmer
+    chest: wheat_crate
+    guard: hooded_bandit
+    cover: hay_bale
+    key: key
+    light: alarm_beacon
+
+factory:
+  floor: factory_floor
+  walls:
+    top: metal_wall_top
+    bottom: metal_wall_bottom
+    left: metal_wall_left
+    right: metal_wall_right
+    corner_tl: metal_wall_corner_tl
+    corner_tr: metal_wall_corner_tr
+    corner_bl: metal_wall_corner_bl
+    corner_br: metal_wall_corner_br
+  face_end_left: metal_wall_face_end_left
+  face_end_right: metal_wall_face_end_right
+  doors:
+    top: metal_door_closed
+    bottom: metal_opening_bottom
+    left: metal_opening_left
+    right: metal_opening_right
+  objects:
+    player_spawn: factory_worker
+    chest: cardboard_box
+    guard: robot_rover
+    cover: metal_barrel
+    key: key
+    light: alarm_beacon
