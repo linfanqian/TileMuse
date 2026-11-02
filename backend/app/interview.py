@@ -32,7 +32,7 @@ _SPEC_RULES = """\
 The spec must be consistent:
 - width and height are 4-128 tiles, including the outer walls. Objects go on the \
 (width - 2) * (height - 2) interior tiles.
-- doors is 1-8.
+- doors is 1-8. Doors are the way out, so count any exits the user asks for as doors.
 - objects lists each kind at most once, and the counts must fit in the interior.
 - Include one player_spawn.
 - Every rule needs its type field: "type": "max_density" or "type": "min_distance".
