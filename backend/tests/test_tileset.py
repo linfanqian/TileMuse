@@ -96,6 +96,12 @@ def test_catalog_rejects_id_outside_sheet(tiles):
         Catalog(**catalog(entry(**tiles)))
 
 
+def test_kit_rejects_missing_description():
+    no_description = {k: v for k, v in kit().items() if k != "description"}
+    with pytest.raises(ValidationError, match="description"):
+        ThemeKit(**no_description)
+
+
 def test_kit_rejects_missing_wall_piece():
     walls = kit()["walls"]
     del walls["corner_br"]

@@ -40,7 +40,7 @@ To change a kit:
 3. Set its `confidence` to `high` in `catalog.yaml`.
 4. Run `uv run pytest tests/test_tileset.py`.
 
-To add a kit, add it to `kits.yaml`. The spec and the LLM prompts read their kit list from that file, so no code change is needed. Then restart the backend, which reads the file only at startup, and run `npm run gen:api`.
+To add a kit, write it in `kits.yaml` with a `description`, and follow steps 2-4 for each new tile. The spec and the LLM prompts read their kit list from that file, so no code change is needed. Last, restart the backend, which reads the file only at startup, and run `npm run gen:api`.
 
 ## Drawing notes
 
