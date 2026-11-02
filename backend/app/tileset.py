@@ -22,8 +22,15 @@ WallPiece = Literal[
     "top", "bottom", "left", "right", "corner_tl", "corner_tr", "corner_bl", "corner_br"
 ]
 
-# Doors double as exits, so `exit` needs no tile of its own.
-KIT_OBJECTS = [kind for kind in ObjectKind if kind != ObjectKind.EXIT]
+# The catalog kind each object's tile must have. Doors double as exits, so `exit` has no tile.
+OBJECT_TILE_KINDS: dict[ObjectKind, Kind] = {
+    ObjectKind.PLAYER_SPAWN: "character",
+    ObjectKind.CHEST: "object",
+    ObjectKind.GUARD: "character",
+    ObjectKind.COVER: "object",
+    ObjectKind.KEY: "item",
+    ObjectKind.LIGHT: "object",
+}
 
 
 class TileEntry(BaseModel):
@@ -89,15 +96,22 @@ class ThemeKit(BaseModel):
     @field_validator("objects")
     @classmethod
     def check_objects(cls, objects: dict[ObjectKind, str]) -> dict[ObjectKind, str]:
-        return _require_all(objects, KIT_OBJECTS, "object kind")
+        if ObjectKind.EXIT in objects:
+            raise ValueError("exit has no tile: doors double as exits")
+        return _require_all(objects, OBJECT_TILE_KINDS, "object kind")
 
-    def tile_names(self) -> set[str]:
-        """Every catalog entry this kit uses."""
-        single = (self.floor, self.floor_shadow_top, self.face_end_left, self.face_end_right)
-        names = {name for name in single if name is not None}
-        return (
-            names | set(self.walls.values()) | set(self.doors.values()) | set(self.objects.values())
-        )
+    def slots(self) -> list[tuple[str, Kind]]:
+        """Every catalog entry this kit uses, with the kind its slot needs."""
+        slots: list[tuple[str | None, Kind]] = [
+            (self.floor, "floor"),
+            (self.floor_shadow_top, "floor"),
+            (self.face_end_left, "wall"),
+            (self.face_end_right, "wall"),
+            *((name, "wall") for name in self.walls.values()),
+            *((name, "door") for name in self.doors.values()),
+            *((name, OBJECT_TILE_KINDS[kind]) for kind, name in self.objects.items()),
+        ]
+        return [(name, kind) for name, kind in slots if name is not None]
 
 
 class Tileset(BaseModel):
@@ -108,11 +122,13 @@ class Tileset(BaseModel):
     def check_kits(self) -> Self:
         entries = {e.name: e for e in self.catalog.entries}
         for theme, kit in self.kits.items():
-            for name in sorted(kit.tile_names()):
+            for name, kind in kit.slots():
                 if name not in entries:
                     raise ValueError(f"{theme} kit: no catalog entry named {name}")
                 if entries[name].confidence != "high":
                     raise ValueError(f"{theme} kit: {name} has not been reviewed")
+                if entries[name].kind != kind:
+                    raise ValueError(f"{theme} kit: {name} is {entries[name].kind}, not {kind}")
             # A MapObject fills one cell, so a larger tile would cover cells that look free.
             for kind, name in kit.objects.items():
                 if entries[name].footprint != (1, 1):

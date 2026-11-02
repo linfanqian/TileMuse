@@ -1,11 +1,20 @@
 import struct
-from typing import Any
+from typing import Any, get_args
 
 import pytest
 from pydantic import ValidationError
 
 from app.spec import ObjectKind
-from app.tileset import ASSETS, KIT_OBJECTS, Catalog, ThemeKit, TileEntry, Tileset, load_tileset
+from app.tileset import (
+    ASSETS,
+    OBJECT_TILE_KINDS,
+    Catalog,
+    Kind,
+    ThemeKit,
+    TileEntry,
+    Tileset,
+    load_tileset,
+)
 
 
 def entry(name: str = "tile", **overrides: Any) -> dict[str, Any]:
@@ -30,15 +39,20 @@ def catalog(*entries: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def tiles(**overrides: Any) -> list[dict[str, Any]]:
+    """One catalog entry per kind, named after its kind."""
+    return [entry(kind, kind=kind, **overrides) for kind in get_args(Kind)]
+
+
 def kit(**overrides: Any) -> dict[str, Any]:
-    """A complete kit that uses one catalog entry, named `tile`, everywhere."""
+    """A complete kit that uses the entries from `tiles`."""
     pieces = ("top", "bottom", "left", "right")
     corners = ("corner_tl", "corner_tr", "corner_bl", "corner_br")
     return {
-        "floor": "tile",
-        "walls": dict.fromkeys(pieces + corners, "tile"),
-        "doors": dict.fromkeys(pieces, "tile"),
-        "objects": dict.fromkeys(KIT_OBJECTS, "tile"),
+        "floor": "floor",
+        "walls": dict.fromkeys(pieces + corners, "wall"),
+        "doors": dict.fromkeys(pieces, "door"),
+        "objects": dict(OBJECT_TILE_KINDS),
         **overrides,
     }
 
@@ -57,12 +71,17 @@ def test_sheet_image_matches_catalog():
 
 
 def test_valid_tileset_passes():
-    Tileset(catalog=catalog(entry()), kits={"dungeon": kit()})
+    Tileset(catalog=catalog(*tiles()), kits={"dungeon": kit()})
 
 
 def test_entry_rejects_wrong_part_count():
     with pytest.raises(ValidationError, match="2 parts"):
         TileEntry(**entry(footprint=(1, 3), parts=[0, 1]))
+
+
+def test_entry_rejects_multi_cell_without_parts():
+    with pytest.raises(ValidationError, match="0 parts for a 2x2 entry"):
+        TileEntry(**entry(footprint=(2, 2)))
 
 
 def test_catalog_rejects_duplicate_name():
@@ -101,18 +120,55 @@ def test_kit_needs_no_exit_tile():
     assert ObjectKind.EXIT not in ThemeKit(**kit()).objects
 
 
+def test_kit_rejects_exit_tile():
+    objects = {**kit()["objects"], ObjectKind.EXIT: "object"}
+    with pytest.raises(ValidationError, match="doors double as exits"):
+        ThemeKit(**kit(objects=objects))
+
+
+def test_every_object_kind_but_exit_has_a_tile_kind():
+    assert set(OBJECT_TILE_KINDS) == set(ObjectKind) - {ObjectKind.EXIT}
+
+
 def test_tileset_rejects_unknown_tile_name():
     with pytest.raises(ValidationError, match="no catalog entry named nope"):
-        Tileset(catalog=catalog(entry()), kits={"dungeon": kit(floor="nope")})
+        Tileset(catalog=catalog(*tiles()), kits={"dungeon": kit(floor="nope")})
 
 
 def test_tileset_rejects_unreviewed_tile():
-    with pytest.raises(ValidationError, match="tile has not been reviewed"):
-        Tileset(catalog=catalog(entry(confidence="medium")), kits={"dungeon": kit()})
+    with pytest.raises(ValidationError, match="has not been reviewed"):
+        Tileset(catalog=catalog(*tiles(confidence="medium")), kits={"dungeon": kit()})
+
+
+@pytest.mark.parametrize(
+    ("slot", "message"),
+    [
+        ({"floor": "object"}, "object is object, not floor"),
+        ({"floor_shadow_top": "wall"}, "wall is wall, not floor"),
+        ({"face_end_left": "floor"}, "floor is floor, not wall"),
+        ({"face_end_right": "door"}, "door is door, not wall"),
+        ({"walls": {**kit()["walls"], "left": "door"}}, "door is door, not wall"),
+        ({"doors": {**kit()["doors"], "top": "wall"}}, "wall is wall, not door"),
+        ({"objects": {**kit()["objects"], ObjectKind.KEY: "object"}}, "object is object, not item"),
+        (
+            {"objects": {**kit()["objects"], ObjectKind.GUARD: "item"}},
+            "item is item, not character",
+        ),
+    ],
+)
+def test_tileset_rejects_tile_of_wrong_kind(slot, message):
+    with pytest.raises(ValidationError, match=message):
+        Tileset(catalog=catalog(*tiles()), kits={"dungeon": kit(**slot)})
+
+
+def test_tileset_allows_tile_from_another_pack():
+    knight = entry("knight", kind="character", themes=["dungeon"])
+    objects = {**kit()["objects"], ObjectKind.GUARD: "knight"}
+    Tileset(catalog=catalog(*tiles(), knight), kits={"town": kit(objects=objects)})
 
 
 def test_tileset_rejects_multi_cell_object():
-    wide = entry("wide", footprint=(2, 1))
+    wide = entry("wide", kind="object", footprint=(2, 1), parts=[0, 1])
     objects = {**kit()["objects"], ObjectKind.CHEST: "wide"}
     with pytest.raises(ValidationError, match="chest tile wide must fill one cell"):
-        Tileset(catalog=catalog(entry(), wide), kits={"dungeon": kit(objects=objects)})
+        Tileset(catalog=catalog(*tiles(), wide), kits={"dungeon": kit(objects=objects)})

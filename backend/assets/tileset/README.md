@@ -31,6 +31,8 @@ The tiles TileMuse draws maps with. Load them through `load_tileset()` in `backe
 
 Each kit names a floor, 8 wall pieces, a door for each side, and a tile for each object kind. A kit may use tiles from any pack. Every tile it uses must have `confidence: high`.
 
+Each slot takes one tile `kind`. Floors, walls, and doors take their own kind. `player_spawn` and `guard` take `character`, `key` takes `item`, and `chest`, `cover`, and `light` take `object`.
+
 To change a kit:
 
 1. Edit `kits.yaml`.
