@@ -1485,6 +1485,7 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "httpx2" },
     { name = "pydantic-settings" },
+    { name = "pyyaml" },
 ]
 
 [package.dev-dependencies]
@@ -1499,6 +1500,7 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.143.0" },
     { name = "httpx2", specifier = ">=2.14.0" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
 ]
 
 [package.metadata.requires-dev]
