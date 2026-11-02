@@ -14,7 +14,7 @@ from app.spec import MapSpec, MinDistanceRule, ObjectKind, doors_on_wall
 from app.walkable import BLOCKING_KINDS, Cell, reachable
 
 ATTEMPTS = 20  # Layouts to try before keeping the one with the fewest misses.
-CANDIDATES = 200  # Cells to try for each object. Bounds the time on large maps.
+CANDIDATES = 100  # Cells to compare for each object, once one fits. Bounds the time.
 # Distance rules may be impossible to meet, so retry those misses only while
 # (tries * objects^2) stays below this. Walkable misses always get every attempt.
 RULE_RETRY_LIMIT = 200_000
@@ -76,6 +76,10 @@ def _layout(spec: MapSpec, rng: Random) -> tuple[GameMap, tuple[int, int]]:
             return [] if cell in walkable else None
         if cell in network:
             return [] if kind == ObjectKind.PLAYER_SPAWN else None
+        if kind == ObjectKind.CHEST and not network.keys().isdisjoint(_neighbors(cell)):
+            return []
+        if len(network) >= room:  # Skips the slow path search once nothing more can join.
+            return None
         path = _path(cell, network, blocked, rng)
         if path is None:
             return None
@@ -86,7 +90,9 @@ def _layout(spec: MapSpec, rng: Random) -> tuple[GameMap, tuple[int, int]]:
         nonlocal unreachable, too_close
         for _ in range(counts.get(kind, 0)):
             best: tuple[int, Cell, list[Cell]] | None = None
-            for cell in free[:CANDIDATES]:
+            for tried, cell in enumerate(free):
+                if best is not None and tried >= CANDIDATES:
+                    break
                 breaks = _distance_breaks(kind, cell, placed, gaps)
                 if best is None or breaks < best[0]:
                     steps = steps_to_add(kind, cell)
@@ -173,8 +179,7 @@ def _grow(
     """Add cells next to the network, at random, until it has `size` cells."""
     frontier = list(network)
     while len(network) < size and frontier:
-        x, y = frontier.pop(rng.randrange(len(frontier)))
-        for cell in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+        for cell in _neighbors(frontier.pop(rng.randrange(len(frontier)))):
             if (
                 len(network) < size
                 and cell in interior
@@ -183,6 +188,11 @@ def _grow(
             ):
                 network[cell] = None
                 frontier.append(cell)
+
+
+def _neighbors(cell: Cell) -> tuple[Cell, Cell, Cell, Cell]:
+    x, y = cell
+    return (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)
 
 
 def _min_distances(spec: MapSpec) -> dict[ObjectKind, dict[ObjectKind, int]]:
