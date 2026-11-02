@@ -116,18 +116,8 @@ def test_kit_rejects_missing_object_kind():
         ThemeKit(**kit(objects=objects))
 
 
-def test_kit_needs_no_exit_tile():
-    assert ObjectKind.EXIT not in ThemeKit(**kit()).objects
-
-
-def test_kit_rejects_exit_tile():
-    objects = {**kit()["objects"], ObjectKind.EXIT: "object"}
-    with pytest.raises(ValidationError, match="doors double as exits"):
-        ThemeKit(**kit(objects=objects))
-
-
-def test_every_object_kind_but_exit_has_a_tile_kind():
-    assert set(OBJECT_TILE_KINDS) == set(ObjectKind) - {ObjectKind.EXIT}
+def test_every_object_kind_has_a_tile_kind():
+    assert set(OBJECT_TILE_KINDS) == set(ObjectKind)
 
 
 def test_tileset_rejects_unknown_tile_name():

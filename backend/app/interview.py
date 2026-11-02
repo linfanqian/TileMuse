@@ -27,14 +27,14 @@ from app.spec import (
 logger = logging.getLogger(__name__)
 
 # The JSON schema carries field names and enums; this states the checks in spec.py. The
-# player_spawn/exit line is a design requirement that nothing checks yet.
+# player_spawn line is a design requirement that nothing checks yet.
 _SPEC_RULES = """\
 The spec must be consistent:
 - width and height are 4-128 tiles, including the outer walls. Objects go on the \
 (width - 2) * (height - 2) interior tiles.
-- doors is 1-8.
+- doors is 1-8. Doors are the way out, so count any exits the user asks for as doors.
 - objects lists each kind at most once, and the counts must fit in the interior.
-- Include one player_spawn and at least one exit.
+- Include one player_spawn.
 - Every rule needs its type field: "type": "max_density" or "type": "min_distance".
 - rules are optional. At most one max_density: objects / interior tiles <= max. \
 At most one min_distance per pair of kinds: both kinds are in objects, a pair of the same kind \

@@ -16,7 +16,6 @@ FULL_SPEC = {
         {"kind": "player_spawn", "count": 1},
         {"kind": "guard", "count": 2},
         {"kind": "cover", "count": 6},
-        {"kind": "exit", "count": 1},
     ],
     "rules": [
         {"type": "max_density", "max": 0.2},
@@ -171,7 +170,7 @@ def test_complete_draft_becomes_spec():
 
 
 def test_complete_draft_checks_consistency():
-    # Each field is valid alone, but 10 objects don't fit in a 4x4 room's 4 interior tiles.
+    # Each field is valid alone, but 9 objects don't fit in a 4x4 room's 4 interior tiles.
     draft = SpecDraft.model_validate({**FULL_SPEC, "width": 4, "height": 4, "rules": []})
     with pytest.raises(ValidationError, match="do not fit"):
         draft.to_spec()
@@ -179,8 +178,9 @@ def test_complete_draft_checks_consistency():
 
 def test_object_and_rule_lists_are_capped(make_spec):
     # Bounds the draft that goes into the interview's prompt, which isn't checked for repeats.
-    objects = [{"kind": "chest", "count": 1}] * 8
-    rules = [{"type": "max_density", "max": 0.5}] * 30
+    kinds = len(ObjectKind)
+    objects = [{"kind": "chest", "count": 1}] * (kinds + 1)
+    rules = [{"type": "max_density", "max": 0.5}] * (2 + kinds * (kinds + 1) // 2)
     for data in ({"objects": objects}, {"rules": rules}):
         with pytest.raises(ValidationError, match="at most"):
             SpecDraft.model_validate(data)
