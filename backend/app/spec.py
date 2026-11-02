@@ -10,6 +10,8 @@ from typing import Annotated, Any, Literal, Self, get_args
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.kits import read_kits
+
 
 class ObjectKind(StrEnum):
     """The fixed object set the generator can place."""
@@ -70,12 +72,17 @@ Rules = Annotated[
     list[LayoutRule], Field(max_length=1 + len(ObjectKind) * (len(ObjectKind) + 1) // 2)
 ]
 
-SpecField = Literal["theme", "mood", "width", "height", "doors", "objects", "rules"]
+# The tile art for a map. Comes from kits.yaml, so adding a kit needs no code change, and the
+# schema sent to Claude still lists the allowed values. `theme` stays free text.
+Kit = Literal[tuple(read_kits())]
+
+SpecField = Literal["theme", "mood", "kit", "width", "height", "doors", "objects", "rules"]
 
 
 class MapSpec(BaseModel):
     theme: Label
     mood: Label
+    kit: Kit
     width: Size
     height: Size
     doors: Doors = 1
@@ -130,6 +137,7 @@ class SpecDraft(BaseModel):
 
     theme: Label | None = None
     mood: Label | None = None
+    kit: Kit | None = None
     width: Size | None = None
     height: Size | None = None
     doors: Doors | None = None

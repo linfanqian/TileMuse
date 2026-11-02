@@ -29,7 +29,7 @@ The tiles TileMuse draws maps with. Load them through `load_tileset()` in `backe
 
 ## Kits
 
-Each kit names a floor, 8 wall pieces, a door for each side, and a tile for each object kind. A kit may use tiles from any pack. Every tile it uses must have `confidence: high`.
+Each kit has a `description` that tells the LLM when to choose it, and names a floor, 8 wall pieces, a door for each side, and a tile for each object kind. A kit may use tiles from any pack. Every tile it uses must have `confidence: high`.
 
 Each slot takes one tile `kind`. Floors, walls, and doors take their own kind. `player_spawn` and `guard` take `character`, `key` takes `item`, and `chest`, `cover`, and `light` take `object`.
 
@@ -39,6 +39,8 @@ To change a kit:
 2. Check the new tile in a sample room.
 3. Set its `confidence` to `high` in `catalog.yaml`.
 4. Run `uv run pytest tests/test_tileset.py`.
+
+To add a kit, add it to `kits.yaml`. The spec and the LLM prompts read their kit list from that file, so no code change is needed. Then run `npm run gen:api`.
 
 ## Drawing notes
 
