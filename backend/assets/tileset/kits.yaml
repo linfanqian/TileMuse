@@ -2,7 +2,7 @@
 # Names must exist in catalog.yaml with `confidence: high`.
 # A kit may use tiles from any pack.
 # `description` tells the LLM when to choose the kit. A new kit here is enough for the spec
-# and the prompts to offer it; then run `npm run gen:api`.
+# and the prompts to offer it; then restart the backend and run `npm run gen:api`.
 # Doors double as exits, so there is no `exit` tile.
 # No pack has a lamp or torch, so `light` uses the closest match, alarm_beacon.
 

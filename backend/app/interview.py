@@ -60,8 +60,8 @@ Each turn:
 - Update the draft from the whole conversation. Set every field the user's answers settle, even \
 ones you didn't ask about, and keep decided fields unless the user changes them. Leave a field \
 null until it is decided. "rules": [] means no layout rules.
-- Set kit yourself as soon as the idea suggests one. Ask about it only if the user wants to \
-choose.
+- Set kit yourself from the idea, using the closest one even if none fits well. Ask about it \
+only if the user wants to choose.
 - Then ask about the one most important field that is still null or vague. Your message is that \
 question alone, in one short sentence. Don't list options or examples in it: the suggested \
 answers show next to it. In the submitted question, give the field, a one-line reason it \

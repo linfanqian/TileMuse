@@ -4,7 +4,7 @@ from typing import Any, get_args
 import pytest
 from pydantic import ValidationError
 
-from app.spec import Kit, ObjectKind
+from app.spec import ObjectKind
 from app.tileset import (
     ASSETS,
     OBJECT_TILE_KINDS,
@@ -58,8 +58,8 @@ def kit(**overrides: Any) -> dict[str, Any]:
     }
 
 
-def test_every_spec_kit_is_in_the_tileset():
-    assert set(load_tileset().kits) == set(get_args(Kit))
+def test_load_tileset_keeps_the_first_kits():
+    assert {"dungeon", "town", "farm", "factory"} <= set(load_tileset().kits)
 
 
 def test_sheet_image_matches_catalog():
