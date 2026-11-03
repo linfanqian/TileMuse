@@ -88,11 +88,23 @@ def test_rejects_duplicate_object_kinds():
         MapSpec.model_validate({**FULL_SPEC, "objects": objects, "rules": []})
 
 
+@pytest.mark.parametrize(("width", "height", "room"), [(4, 5, 2), (5, 5, 4), (8, 6, 6), (5, 7, 4)])
+def test_doors_must_fit_on_the_walls(make_spec, width, height, room):
+    make_spec(width=width, height=height, doors=room)
+    with pytest.raises(ValidationError, match="doors do not fit"):
+        make_spec(width=width, height=height, doors=room + 1)
+
+
+def test_rejects_a_room_with_no_space_for_a_door(make_spec):
+    with pytest.raises(ValidationError, match="1 doors do not fit"):
+        make_spec(width=4, height=4)
+
+
 def test_rejects_too_many_objects_for_room(make_spec):
-    # A 4x4 room has 2x2 = 4 interior tiles.
-    make_spec(width=4, height=4, objects=[{"kind": "chest", "count": 4}])
+    # A 4x5 room has 2x3 = 6 interior tiles.
+    make_spec(width=4, height=5, objects=[{"kind": "chest", "count": 6}])
     with pytest.raises(ValidationError, match="do not fit"):
-        make_spec(width=4, height=4, objects=[{"kind": "chest", "count": 5}])
+        make_spec(width=4, height=5, objects=[{"kind": "chest", "count": 7}])
 
 
 def test_rejects_min_distance_with_missing_kind():
@@ -183,8 +195,8 @@ def test_complete_draft_becomes_spec():
 
 
 def test_complete_draft_checks_consistency():
-    # Each field is valid alone, but 9 objects don't fit in a 4x4 room's 4 interior tiles.
-    draft = SpecDraft.model_validate({**FULL_SPEC, "width": 4, "height": 4, "rules": []})
+    # Each field is valid alone, but 9 objects don't fit in a 4x5 room's 6 interior tiles.
+    draft = SpecDraft.model_validate({**FULL_SPEC, "width": 4, "height": 5, "rules": []})
     with pytest.raises(ValidationError, match="do not fit"):
         draft.to_spec()
 

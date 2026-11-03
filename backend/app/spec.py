@@ -79,6 +79,12 @@ Kit = Literal[tuple(read_kits())]
 SpecField = Literal["theme", "mood", "kit", "width", "height", "doors", "objects", "rules"]
 
 
+def doors_on_wall(length: int) -> int:
+    """How many doors fit on a wall. A door is drawn three cells wide, so door centers stay at
+    least 2 cells from the corners and at least 3 cells apart."""
+    return (length - 2) // 3
+
+
 class MapSpec(BaseModel):
     theme: Label
     mood: Label
@@ -94,6 +100,12 @@ class MapSpec(BaseModel):
         dupes = [kind for kind, n in Counter(o.kind for o in self.objects).items() if n > 1]
         if dupes:
             raise ValueError(f"each object kind may appear once in objects: {', '.join(dupes)}")
+        door_room = 2 * doors_on_wall(self.width) + 2 * doors_on_wall(self.height)
+        if self.doors > door_room:
+            raise ValueError(
+                f"{self.doors} doors do not fit: a {self.width}x{self.height} room has room for "
+                f"{door_room}"
+            )
         interior = (self.width - 2) * (self.height - 2)
         total = sum(o.count for o in self.objects)
         if total > interior:
