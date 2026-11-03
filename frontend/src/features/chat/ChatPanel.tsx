@@ -2,14 +2,16 @@ import { useState, type FormEvent } from 'react'
 
 type Props = {
   onSubmit: (idea: string) => void
+  // True while a map is being made, so the idea can't be sent twice.
+  busy?: boolean
 }
 
-export default function ChatPanel({ onSubmit }: Props) {
+export default function ChatPanel({ onSubmit, busy = false }: Props) {
   const [idea, setIdea] = useState('')
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (idea.trim()) onSubmit(idea.trim())
+    if (!busy && idea.trim()) onSubmit(idea.trim())
   }
 
   return (
@@ -20,7 +22,9 @@ export default function ChatPanel({ onSubmit }: Props) {
         value={idea}
         onChange={(e) => setIdea(e.target.value)}
       />
-      <button type="submit">Generate</button>
+      <button type="submit" disabled={busy}>
+        {busy ? 'Generating…' : 'Generate'}
+      </button>
     </form>
   )
 }
