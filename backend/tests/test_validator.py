@@ -40,10 +40,11 @@ def test_open_room_has_no_violations(make_spec):
 def test_map_without_a_spawn_is_walked_from_its_first_door(make_spec):
     # Cover and light close off (6, 1), the only way to the second door at (7, 1).
     doors = [(3, 0), (7, 1)]
-    assert validate(room(doors=doors, objects=[("guard", 2, 2)]), make_spec()) == []
+    spec = make_spec(doors=2)
+    assert validate(room(doors=doors, objects=[("guard", 2, 2)]), spec) == []
 
     cut = room(doors=doors, objects=[("cover", 5, 1), ("light", 6, 2), ("key", 6, 1)])
-    assert [(v.code, v.x, v.y) for v in validate(cut, make_spec())] == [
+    assert [(v.code, v.x, v.y) for v in validate(cut, spec)] == [
         ("door_unreachable", 7, 1),
         ("object_unreachable", 6, 1),
     ]
@@ -93,21 +94,43 @@ def test_walking_object_unreachable(make_spec, kind):
     assert violation.details == {"kind": kind}
 
 
+def test_door_count(make_spec):
+    assert validate(room(doors=[(3, 0), (7, 2)]), make_spec(doors=2)) == []
+
+    for doors in ([(3, 0)], [(3, 0), (7, 2), (0, 2)]):
+        (violation,) = validate(room(doors=doors), make_spec(doors=2))
+        assert violation.code == "door_count"
+        assert violation.details == {"expected": 2, "found": len(doors)}
+
+
+@pytest.mark.parametrize("kind", ["player_spawn", "chest", "cover"])
+def test_object_on_a_wall(make_spec, kind):
+    # Only object_on_wall is reported, even for a chest with an open side or a spawn.
+    (violation,) = validate(room(objects=[SPAWN, (kind, 2, 0)]), make_spec())
+    assert (violation.code, violation.x, violation.y) == ("object_on_wall", 2, 0)
+    assert violation.details == {"kind": kind}
+
+
 @pytest.mark.parametrize("wall", [(2, 0), (0, 2)])
 def test_spawn_on_a_wall_is_reported_alone(make_spec, wall):
-    # Doors and objects are judged from the next spawn, so only the stuck spawn is reported.
+    # Doors and objects are judged from the next spawn, or from the door if there is none.
     stuck = ("player_spawn", *wall)
-    (violation,) = validate(room(objects=[stuck, ("player_spawn", 5, 3)]), make_spec())
-    assert (violation.code, violation.x, violation.y) == ("object_unreachable", *wall)
-
-    # With no other spawn, nothing else can be judged, so it is still reported alone.
-    (violation,) = validate(room(objects=[stuck, ("key", 2, 2)]), make_spec())
-    assert (violation.code, violation.x, violation.y) == ("object_unreachable", *wall)
+    for others in ([("player_spawn", 5, 3)], [("key", 2, 2)]):
+        (violation,) = validate(room(objects=[stuck, *others]), make_spec())
+        assert (violation.code, violation.x, violation.y) == ("object_on_wall", *wall)
 
 
 def test_spawn_on_a_blocking_object_is_reported_alone(make_spec):
     (violation,) = validate(room(objects=[SPAWN, ("cover", 1, 1), ("key", 4, 4)]), make_spec())
     assert (violation.code, violation.details) == ("object_unreachable", {"kind": "player_spawn"})
+
+
+def test_boxed_in_spawn_is_reported_whatever_the_order(make_spec):
+    # Covers box in the spawn at (6, 1). The spawn at (1, 1) reaches the door.
+    boxed = [("player_spawn", 6, 1), ("cover", 5, 1), ("cover", 6, 2)]
+    for objects in ([SPAWN, *boxed], [*boxed, SPAWN]):
+        (violation,) = validate(room(objects=objects), make_spec())
+        assert (violation.code, violation.x, violation.y) == ("object_unreachable", 6, 1)
 
 
 def test_chest_needs_a_reachable_side(make_spec):
@@ -182,6 +205,7 @@ def test_every_code_has_a_template_that_fills(make_spec):
     )
     broken = [
         room(objects=[]),
+        room(doors=[], objects=[("key", 0, 2)]),
         room(
             doors=[(7, 1)],
             objects=[SPAWN, ("cover", 5, 1), ("light", 6, 2), ("guard", 6, 1), ("guard", 5, 2)],

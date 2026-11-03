@@ -119,8 +119,13 @@ def test_validate_explains_each_violation(make_spec):
     res = client.post("/api/validate", json={"spec": spec, "map": tiny})
     assert res.status_code == 200
     body = res.json()
-    assert [v["code"] for v in body["violations"]] == ["missing_object", "max_density"]
-    assert body["explanations"][0]["text"].startswith("Not enough player_spawn")
+    assert [v["code"] for v in body["violations"]] == [
+        "missing_object",
+        "door_count",
+        "object_on_wall",
+        "max_density",
+    ]
+    assert body["explanations"][0]["text"].startswith("Not enough player spawn")
 
 
 def test_rejects_map_whose_tiles_do_not_match_its_size(make_spec):
