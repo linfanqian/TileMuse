@@ -23,6 +23,10 @@ def test_blocked_start_reaches_nothing():
     assert reachable(ROOM, {(1, 1)}, (1, 1)) == set()
 
 
+def test_start_on_a_wall_reaches_nothing():
+    assert reachable(ROOM, set(), (1, 0)) == set()
+
+
 def test_blocking_kinds_match_the_kit_tiles():
     tileset = load_tileset()
     entries = {entry.name: entry for entry in tileset.catalog.entries}

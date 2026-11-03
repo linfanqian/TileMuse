@@ -11,7 +11,7 @@ from random import Random
 
 from app.models import GameMap, MapObject, Tile
 from app.spec import MapSpec, MinDistanceRule, ObjectKind, doors_on_wall
-from app.walkable import BLOCKING_KINDS, Cell, reachable
+from app.walkable import BLOCKING_KINDS, Cell, neighbors, reachable
 
 ATTEMPTS = 20  # Layouts to try before keeping the one with the fewest misses.
 CANDIDATES = 100  # Cells to compare for each object, once one fits. Bounds the time.
@@ -76,7 +76,7 @@ def _layout(spec: MapSpec, rng: Random) -> tuple[GameMap, tuple[int, int]]:
             return [] if cell in walkable else None
         if cell in network:
             return [] if kind == ObjectKind.PLAYER_SPAWN else None
-        if kind == ObjectKind.CHEST and not network.keys().isdisjoint(_neighbors(cell)):
+        if kind == ObjectKind.CHEST and not network.keys().isdisjoint(neighbors(cell)):
             return []
         if len(network) >= room:  # Skips the slow path search once nothing more can join.
             return None
@@ -179,7 +179,7 @@ def _grow(
     """Add cells next to the network, at random, until it has `size` cells."""
     frontier = list(network)
     while len(network) < size and frontier:
-        for cell in _neighbors(frontier.pop(rng.randrange(len(frontier)))):
+        for cell in neighbors(frontier.pop(rng.randrange(len(frontier)))):
             if (
                 len(network) < size
                 and cell in interior
@@ -188,11 +188,6 @@ def _grow(
             ):
                 network[cell] = None
                 frontier.append(cell)
-
-
-def _neighbors(cell: Cell) -> tuple[Cell, Cell, Cell, Cell]:
-    x, y = cell
-    return (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)
 
 
 def _min_distances(spec: MapSpec) -> dict[ObjectKind, dict[ObjectKind, int]]:
