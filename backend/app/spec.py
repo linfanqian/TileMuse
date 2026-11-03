@@ -4,6 +4,7 @@ Pydantic checks the spec's own consistency here. Whether a map satisfies the spe
 validator's job.
 """
 
+import math
 from collections import Counter
 from enum import StrEnum
 from typing import Annotated, Any, Literal, Self, get_args
@@ -85,6 +86,15 @@ def doors_on_wall(length: int) -> int:
     return (length - 2) // 3
 
 
+def density(objects: int, width: int, height: int) -> float:
+    """Objects per interior tile, as max_density measures it. The spec and the validator both use
+    this, so they agree on edge values. A map with no interior counts as full."""
+    interior = max(width - 2, 0) * max(height - 2, 0)
+    if interior == 0:
+        return math.inf if objects else 0.0
+    return objects / interior
+
+
 class MapSpec(BaseModel):
     theme: Label
     mood: Label
@@ -121,8 +131,10 @@ class MapSpec(BaseModel):
         # fits; whether all `count` objects fit at once is left to the validator.
         max_distance = (self.width - 3) + (self.height - 3)
         for rule in self.rules:
-            # The validator must compute this same ratio so both agree on boundary values.
-            if isinstance(rule, MaxDensityRule) and total / interior > rule.max:
+            if (
+                isinstance(rule, MaxDensityRule)
+                and density(total, self.width, self.height) > rule.max
+            ):
                 raise ValueError(
                     f"max_density {rule.max} allows fewer than the {total} required objects"
                 )
