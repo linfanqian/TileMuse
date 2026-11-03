@@ -139,6 +139,19 @@ def test_blocked_door_is_reported_when_there_is_no_spawn(make_spec):
     ]
 
 
+@pytest.mark.parametrize("doors", [[(3, 0)], [(3, 0), (7, 2)]])
+def test_door_walled_off_from_the_room_is_reported_when_there_is_no_spawn(make_spec, doors):
+    # A wall at (3, 1) shuts the door at (3, 0) out of the room. Starting on that door must not
+    # count as reaching it.
+    game_map = room(doors=doors, objects=[])
+    game_map.tiles[1][3] = Tile.WALL
+    spec = make_spec(doors=len(doors))
+    assert validate(room(doors=doors, objects=[]), spec) == []
+
+    (violation,) = validate(game_map, spec)
+    assert (violation.code, violation.x, violation.y) == ("door_unreachable", 3, 0)
+
+
 def test_spawn_on_a_blocking_object_is_reported_alone(make_spec):
     (violation,) = validate(room(objects=[SPAWN, ("cover", 1, 1), ("key", 4, 4)]), make_spec())
     assert (violation.code, violation.details) == ("object_unreachable", {"kind": "player_spawn"})

@@ -58,7 +58,8 @@ def _main_area(
     tiles: list[list[Tile]], blocked: set[Cell], starts: list[Cell], doors: set[Cell]
 ) -> set[Cell]:
     """The walkable area, from one of `starts`, that reaches the most doors, then the most cells.
-    Ties go to the earlier start. Empty if no one can stand on any start."""
+    Ties go to the earlier start. An area of only door tiles leads into no room, so it is skipped.
+    Empty if no start has a usable area."""
     best: set[Cell] = set()
     seen: set[Cell] = set()
     for start in starts:
@@ -66,6 +67,8 @@ def _main_area(
             continue
         area = reachable(tiles, blocked, start)
         seen |= area
+        if area <= doors:
+            continue
         if (len(doors & area), len(area)) > (len(doors & best), len(best)):
             best = area
     return best
@@ -83,11 +86,10 @@ def _unreachable(game_map: GameMap, spec: MapSpec) -> list[Violation]:
         game_map.tiles, blocked, doors, set(doors)
     )
     if not walkable:
-        # Nowhere to start from, so nothing else can be judged. Only doors and spawns under a
-        # blocking object are reported; spawns on walls and missing doors have their own rules.
-        return [
-            Violation(code="door_unreachable", x=x, y=y) for x, y in doors if (x, y) in blocked
-        ] + [
+        # Nowhere to start from, so objects can't be judged. Every door is blocked or leads into
+        # no room, so each is reported, with any spawn under a blocking object. Spawns on walls
+        # and missing doors have their own rules.
+        return [Violation(code="door_unreachable", x=x, y=y) for x, y in doors] + [
             Violation(code="object_unreachable", x=x, y=y, details={"kind": "player_spawn"})
             for x, y in spawns
             if (x, y) in blocked
