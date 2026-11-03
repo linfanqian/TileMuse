@@ -14,10 +14,6 @@ def _spawns(game_map: GameMap) -> list[MapObject]:
     return [o for o in game_map.objects if o.kind == ObjectKind.PLAYER_SPAWN]
 
 
-def _no_spawn(game_map: GameMap, spec: MapSpec) -> list[Violation]:
-    return [] if _spawns(game_map) else [Violation(code="no_spawn")]
-
-
 def _missing_objects(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     found = Counter(o.kind for o in game_map.objects)
     return [
@@ -31,27 +27,31 @@ def _missing_objects(game_map: GameMap, spec: MapSpec) -> list[Violation]:
 
 
 def _unreachable(game_map: GameMap, spec: MapSpec) -> list[Violation]:
-    """Doors and objects the player can't walk to from the first spawn that isn't on a wall or a
-    blocking object. A chest blocks movement, so it counts as reachable when the player can stand
-    next to it."""
+    """Doors and objects the player can't walk to. The walk starts from the first spawn that isn't
+    on a wall or a blocking object. A map may have no spawn, and then it starts from the first
+    door. A chest blocks movement, so it counts as reachable when the player can stand next to it.
+    """
     spawns = _spawns(game_map)
+    doors = [
+        (x, y)
+        for y, row in enumerate(game_map.tiles)
+        for x, tile in enumerate(row)
+        if tile == Tile.DOOR
+    ]
     blocked = {(o.x, o.y) for o in game_map.objects if o.kind in BLOCKING_KINDS}
     walkable: set[Cell] = set()
-    for spawn in spawns:
-        walkable = reachable(game_map.tiles, blocked, (spawn.x, spawn.y))
+    for start in [(s.x, s.y) for s in spawns] if spawns else doors[:1]:
+        walkable = reachable(game_map.tiles, blocked, start)
         if walkable:
             break
     if not walkable:
-        # No spawn to start from (no_spawn covers none at all), so only the spawns are reported.
+        # Nowhere to start from, so only the stuck spawns are reported.
         return [
             Violation(code="object_unreachable", x=s.x, y=s.y, details={"kind": s.kind})
             for s in spawns
         ]
     violations = [
-        Violation(code="door_unreachable", x=x, y=y)
-        for y, row in enumerate(game_map.tiles)
-        for x, tile in enumerate(row)
-        if tile == Tile.DOOR and (x, y) not in walkable
+        Violation(code="door_unreachable", x=x, y=y) for x, y in doors if (x, y) not in walkable
     ]
     for obj in game_map.objects:
         x, y = obj.x, obj.y
@@ -111,7 +111,7 @@ def _min_distance(game_map: GameMap, spec: MapSpec) -> list[Violation]:
 
 # Add a rule here, a template for each code it emits in explainer.TEMPLATES,
 # and a passing-map and violating-map test.
-RULES: list[Rule] = [_no_spawn, _missing_objects, _unreachable, _max_density, _min_distance]
+RULES: list[Rule] = [_missing_objects, _unreachable, _max_density, _min_distance]
 
 
 def validate(game_map: GameMap, spec: MapSpec) -> list[Violation]:

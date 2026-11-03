@@ -37,8 +37,22 @@ def test_open_room_has_no_violations(make_spec):
     assert validate(room(), make_spec()) == []
 
 
-def test_no_spawn(make_spec):
-    assert codes(room(objects=[("guard", 2, 2)]), make_spec()) == ["no_spawn"]
+def test_map_without_a_spawn_is_walked_from_its_first_door(make_spec):
+    # Cover and light close off (6, 1), the only way to the second door at (7, 1).
+    doors = [(3, 0), (7, 1)]
+    assert validate(room(doors=doors, objects=[("guard", 2, 2)]), make_spec()) == []
+
+    cut = room(doors=doors, objects=[("cover", 5, 1), ("light", 6, 2), ("key", 6, 1)])
+    assert [(v.code, v.x, v.y) for v in validate(cut, make_spec())] == [
+        ("door_unreachable", 7, 1),
+        ("object_unreachable", 6, 1),
+    ]
+
+
+def test_a_missing_spawn_is_reported_once(make_spec):
+    spec = make_spec(objects=[{"kind": "player_spawn", "count": 1}])
+    (violation,) = validate(room(objects=[]), spec)
+    assert violation.details == {"kind": "player_spawn", "expected": 1, "found": 0}
 
 
 def test_missing_object(make_spec):
@@ -178,23 +192,19 @@ def test_every_code_has_a_template_that_fills(make_spec):
     explain(violations)  # Raises KeyError if a template names a detail its rule doesn't set.
 
 
-def test_generated_maps_pass(make_spec):
-    spec = make_spec(
-        width=14,
-        height=10,
-        doors=3,
-        objects=[
-            {"kind": "player_spawn", "count": 2},
-            {"kind": "guard", "count": 3},
-            {"kind": "cover", "count": 12},
-            {"kind": "chest", "count": 2},
-            {"kind": "key", "count": 1},
-            {"kind": "light", "count": 2},
-        ],
-        rules=[
-            {"type": "max_density", "max": 0.3},
-            {"type": "min_distance", "a": "guard", "b": "player_spawn", "tiles": 5},
-        ],
-    )
+@pytest.mark.parametrize("spawns", [2, 0])
+def test_generated_maps_pass(make_spec, spawns):
+    objects = [
+        {"kind": "guard", "count": 3},
+        {"kind": "cover", "count": 12},
+        {"kind": "chest", "count": 2},
+        {"kind": "key", "count": 1},
+        {"kind": "light", "count": 2},
+    ]
+    rules = [{"type": "max_density", "max": 0.3}]
+    if spawns:
+        objects.append({"kind": "player_spawn", "count": spawns})
+        rules.append({"type": "min_distance", "a": "guard", "b": "player_spawn", "tiles": 5})
+    spec = make_spec(width=14, height=10, doors=3, objects=objects, rules=rules)
     for seed in range(40):
         assert validate(generate(spec, Random(seed)), spec) == []

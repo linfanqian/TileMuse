@@ -4,9 +4,8 @@ from app.models import Explanation, Violation
 
 # Violation code -> str.format template, filled from details plus code, x and y.
 TEMPLATES: dict[str, str] = {
-    "no_spawn": "The map has no player spawn, so the player has nowhere to start.",
     "missing_object": "Not enough {kind}: the spec asks for {expected}, but the map has {found}.",
-    "door_unreachable": "The door at ({x}, {y}) can't be reached from the player spawn.",
+    "door_unreachable": "The door at ({x}, {y}) can't be reached.",
     "object_unreachable": "The {kind} at ({x}, {y}) can't be reached.",
     "max_density": "The map has too many objects ({objects}) for its max_density of {max}.",
     "min_distance": (

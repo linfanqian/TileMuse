@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 _KITS = ", ".join(f"{name} for {kit.description}" for name, kit in load_tileset().kits.items())
 
 # The JSON schema carries field names and enums; this states the checks in spec.py. The
-# player_spawn line is checked on the map by the validator, not by the spec.
+# player_spawn line is only a default: a map may have no spawn, so nothing checks it.
 _SPEC_RULES = f"""\
 The spec must be consistent:
 - theme is free text. kit is the tile art, so choose the closest one: {_KITS}.

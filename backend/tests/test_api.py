@@ -88,7 +88,7 @@ def test_generate_requires_seed(make_spec):
 
 
 def test_generate_then_validate_roundtrip(make_spec):
-    spec = make_spec(objects=[{"kind": "player_spawn", "count": 1}]).model_dump(mode="json")
+    spec = make_spec().model_dump(mode="json")  # No spawn: a map may have none.
     res = client.post("/api/generate", json={"spec": spec, "seed": 1})
     assert res.status_code == 200
     generated = res.json()
@@ -106,7 +106,10 @@ def test_generate_then_validate_roundtrip(make_spec):
 
 def test_validate_explains_each_violation(make_spec):
     # No interior at all, so the density is infinite. The response must still be valid JSON.
-    spec = make_spec(rules=[{"type": "max_density", "max": 0.5}]).model_dump(mode="json")
+    spec = make_spec(
+        objects=[{"kind": "player_spawn", "count": 1}],
+        rules=[{"type": "max_density", "max": 0.5}],
+    ).model_dump(mode="json")
     tiny = {
         "width": 2,
         "height": 2,
@@ -116,8 +119,8 @@ def test_validate_explains_each_violation(make_spec):
     res = client.post("/api/validate", json={"spec": spec, "map": tiny})
     assert res.status_code == 200
     body = res.json()
-    assert [v["code"] for v in body["violations"]] == ["no_spawn", "max_density"]
-    assert body["explanations"][0]["text"].startswith("The map has no player spawn")
+    assert [v["code"] for v in body["violations"]] == ["missing_object", "max_density"]
+    assert body["explanations"][0]["text"].startswith("Not enough player_spawn")
 
 
 def test_rejects_map_whose_tiles_do_not_match_its_size(make_spec):
