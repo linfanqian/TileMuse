@@ -4,6 +4,7 @@ import type { components, paths } from './schema'
 type Schemas = components['schemas']
 export type MapSpec = Schemas['MapSpec']
 export type GameMap = Schemas['GameMap']
+export type ObjectKind = Schemas['ObjectKind']
 export type Tile = Schemas['Tile']
 export type Violation = Schemas['Violation']
 export type Explanation = Schemas['Explanation']
