@@ -16,6 +16,7 @@ def test_unknown_code_uses_fallback_without_dropping_it():
 
 
 def test_code_names_in_details_read_as_words(monkeypatch):
-    monkeypatch.setitem(explainer.TEMPLATES, "lost", "The {kind} is lost.")
-    [out] = explain([Violation(code="lost", details={"kind": "player_spawn"})])
-    assert out.text == "The player spawn is lost."
+    monkeypatch.setitem(explainer.TEMPLATES, "lost", "The {kind} near the {other} broke {rule}.")
+    details = {"kind": "player_spawn", "other": "guard", "rule": "max_density"}
+    [out] = explain([Violation(code="lost", details=details)])
+    assert out.text == "The player spawn near the guard broke max_density."

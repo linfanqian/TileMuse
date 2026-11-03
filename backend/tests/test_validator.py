@@ -37,7 +37,7 @@ def test_open_room_has_no_violations(make_spec):
     assert validate(room(), make_spec()) == []
 
 
-def test_map_without_a_spawn_is_walked_from_its_first_door(make_spec):
+def test_map_without_a_spawn_is_walked_from_its_doors(make_spec):
     # Cover and light close off (6, 1), the only way to the second door at (7, 1).
     doors = [(3, 0), (7, 1)]
     spec = make_spec(doors=2)
@@ -105,6 +105,8 @@ def test_door_count(make_spec):
 
 @pytest.mark.parametrize("kind", ["player_spawn", "chest", "cover"])
 def test_object_on_a_wall(make_spec, kind):
+    assert validate(room(objects=[SPAWN, (kind, 2, 1)]), make_spec()) == []
+
     # Only object_on_wall is reported, even for a chest with an open side or a spawn.
     (violation,) = validate(room(objects=[SPAWN, (kind, 2, 0)]), make_spec())
     assert (violation.code, violation.x, violation.y) == ("object_on_wall", 2, 0)
@@ -118,6 +120,12 @@ def test_spawn_on_a_wall_is_reported_alone(make_spec, wall):
     for others in ([("player_spawn", 5, 3)], [("key", 2, 2)]):
         (violation,) = validate(room(objects=[stuck, *others]), make_spec())
         assert (violation.code, violation.x, violation.y) == ("object_on_wall", *wall)
+
+
+def test_map_with_nowhere_to_start_reports_only_the_doors(make_spec):
+    # No spawn and no doors: objects can't be judged, so only door_count is reported.
+    objects = [("key", 2, 2), ("guard", 3, 3), ("chest", 4, 4)]
+    assert codes(room(doors=[], objects=objects), make_spec()) == ["door_count"]
 
 
 def test_spawn_on_a_blocking_object_is_reported_alone(make_spec):

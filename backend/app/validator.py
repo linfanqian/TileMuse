@@ -79,6 +79,14 @@ def _unreachable(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     walkable = _main_area(game_map.tiles, blocked, spawns, set(doors)) or _main_area(
         game_map.tiles, blocked, doors, set(doors)
     )
+    if not walkable:
+        # Nowhere to start from, so nothing else can be judged. Only spawns stuck on a blocking
+        # object are reported; those on walls and the missing doors have their own rules.
+        return [
+            Violation(code="object_unreachable", x=x, y=y, details={"kind": "player_spawn"})
+            for x, y in spawns
+            if game_map.tiles[y][x] != Tile.WALL
+        ]
     violations = [
         Violation(code="door_unreachable", x=x, y=y) for x, y in doors if (x, y) not in walkable
     ]
