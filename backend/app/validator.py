@@ -14,11 +14,11 @@ def _spawns(game_map: GameMap) -> list[MapObject]:
     return [o for o in game_map.objects if o.kind == ObjectKind.PLAYER_SPAWN]
 
 
-def no_spawn(game_map: GameMap, spec: MapSpec) -> list[Violation]:
+def _no_spawn(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     return [] if _spawns(game_map) else [Violation(code="no_spawn")]
 
 
-def missing_objects(game_map: GameMap, spec: MapSpec) -> list[Violation]:
+def _missing_objects(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     found = Counter(o.kind for o in game_map.objects)
     return [
         Violation(
@@ -30,7 +30,7 @@ def missing_objects(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     ]
 
 
-def unreachable(game_map: GameMap, spec: MapSpec) -> list[Violation]:
+def _unreachable(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     """Doors and objects the player can't walk to from the first spawn that isn't on a wall or a
     blocking object. A chest blocks movement, so it counts as reachable when the player can stand
     next to it."""
@@ -66,7 +66,7 @@ def unreachable(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     return violations
 
 
-def max_density(game_map: GameMap, spec: MapSpec) -> list[Violation]:
+def _max_density(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     objects = len(game_map.objects)
     # The density itself stays out of details: it is infinite for a map with no interior, and
     # JSON has no infinity.
@@ -78,7 +78,7 @@ def max_density(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     ]
 
 
-def min_distance(game_map: GameMap, spec: MapSpec) -> list[Violation]:
+def _min_distance(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     """One violation for each pair of objects that is too close."""
     violations = []
     objects = game_map.objects
@@ -111,7 +111,7 @@ def min_distance(game_map: GameMap, spec: MapSpec) -> list[Violation]:
 
 # Add a rule here, a template for each code it emits in explainer.TEMPLATES,
 # and a passing-map and violating-map test.
-RULES: list[Rule] = [no_spawn, missing_objects, unreachable, max_density, min_distance]
+RULES: list[Rule] = [_no_spawn, _missing_objects, _unreachable, _max_density, _min_distance]
 
 
 def validate(game_map: GameMap, spec: MapSpec) -> list[Violation]:
