@@ -1,12 +1,13 @@
-import { useState, type ReactNode } from 'react'
-import type { GameMap, ObjectKind, Tile } from '../../api/client'
 import {
-  eraseObject,
-  moveObject,
-  objectAt,
-  paintTile,
-  placeObject,
-} from './edit'
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type Ref,
+} from 'react'
+import type { GameMap, ObjectKind, Tile } from '../../api/client'
+import { eraseObject, moveObject, paintTile, placeObject } from './edit'
 
 const CELL = 24
 
@@ -33,6 +34,7 @@ const KINDS = Object.keys(MARKERS) as ObjectKind[]
 
 type Tool = 'select' | 'erase' | TileTool | ObjectKind
 type Cell = { x: number; y: number }
+type SetHover = (cell: Cell | null) => void
 
 const isTileTool = (tool: Tool): tool is TileTool => tool in TILE_TOOLS
 
@@ -47,7 +49,18 @@ type Props = {
 export default function MapEditor({ map, onChange }: Props) {
   const [tool, setTool] = useState<Tool>('select')
   const [selected, setSelected] = useState<Cell | null>(null)
-  const [hover, setHover] = useState<Cell | null>(null)
+  // The status line owns the hovered cell, so hovering redraws only that line, not the grid.
+  const setHover = useRef<SetHover>(null)
+
+  // Object index by "x,y", built once per map instead of scanning objects for every cell.
+  const objectIndex = useMemo(() => {
+    const index = new Map<string, number>()
+    map.objects.forEach((o, i) => {
+      if (!index.has(`${o.x},${o.y}`)) index.set(`${o.x},${o.y}`, i)
+    })
+    return index
+  }, [map.objects])
+  const objectOn = (x: number, y: number) => objectIndex.get(`${x},${y}`) ?? -1
 
   function chooseTool(next: Tool) {
     setTool(next)
@@ -60,7 +73,7 @@ export default function MapEditor({ map, onChange }: Props) {
 
   // Select: click an object, then an empty cell to move it there.
   function select(x: number, y: number) {
-    const here = objectAt(map, x, y) !== -1
+    const here = objectOn(x, y) !== -1
     if (selected && !here) {
       edit(moveObject(map, selected, x, y))
       setSelected(null)
@@ -79,7 +92,7 @@ export default function MapEditor({ map, onChange }: Props) {
   }
 
   function describe({ x, y }: Cell): string {
-    const i = objectAt(map, x, y)
+    const i = objectOn(x, y)
     const obj = i === -1 ? '' : ` · ${plain(map.objects[i].kind)}`
     return `(${x}, ${y}) · ${TILE_NAMES[map.tiles[y][x]]}${obj}`
   }
@@ -120,7 +133,7 @@ export default function MapEditor({ map, onChange }: Props) {
       </div>
       <div
         role="grid"
-        onMouseLeave={() => setHover(null)}
+        onMouseLeave={() => setHover.current?.(null)}
         style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${map.width}, ${CELL}px)`,
@@ -129,7 +142,7 @@ export default function MapEditor({ map, onChange }: Props) {
       >
         {map.tiles.flatMap((row, y) =>
           row.map((tile, x) => {
-            const i = objectAt(map, x, y)
+            const i = objectOn(x, y)
             const isSelected = selected?.x === x && selected.y === y
             return (
               <div
@@ -138,7 +151,7 @@ export default function MapEditor({ map, onChange }: Props) {
                 aria-label={describe({ x, y })}
                 aria-selected={isSelected}
                 onClick={() => click(x, y)}
-                onMouseEnter={() => setHover({ x, y })}
+                onMouseEnter={() => setHover.current?.({ x, y })}
                 style={{
                   width: CELL,
                   height: CELL,
@@ -157,13 +170,32 @@ export default function MapEditor({ map, onChange }: Props) {
           }),
         )}
       </div>
-      <p role="status" style={{ display: 'flex', gap: 16 }}>
-        <span>{hover ? describe(hover) : 'Hover a cell'}</span>
-        <span>
-          {map.width} × {map.height}
-        </span>
-      </p>
+      <StatusLine
+        setHoverRef={setHover}
+        describe={describe}
+        size={`${map.width} × ${map.height}`}
+      />
     </div>
+  )
+}
+
+// The hovered cell's position and contents, and the map size.
+function StatusLine({
+  setHoverRef,
+  describe,
+  size,
+}: {
+  setHoverRef: Ref<SetHover>
+  describe: (cell: Cell) => string
+  size: string
+}) {
+  const [hover, setHover] = useState<Cell | null>(null)
+  useImperativeHandle(setHoverRef, () => setHover, [])
+  return (
+    <p role="status" style={{ display: 'flex', gap: 16 }}>
+      <span>{hover ? describe(hover) : 'Hover a cell'}</span>
+      <span>{size}</span>
+    </p>
   )
 }
 

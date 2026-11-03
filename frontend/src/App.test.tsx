@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
 import * as client from './api/client'
@@ -46,6 +46,28 @@ async function generateMap() {
 test('an idea becomes a map with its issues', async () => {
   await generateMap()
   screen.getByText('No issues found.')
+})
+
+test('a new, smaller map starts the editor fresh', async () => {
+  const cells = await generateMap()
+  fireEvent.mouseEnter(cells[15]) // (3, 3), which the next map doesn't have.
+  vi.mocked(client.generate).mockResolvedValue({
+    map: {
+      width: 3,
+      height: 3,
+      tiles: [
+        [1, 2, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+      ],
+      objects: [],
+    },
+    violations: [],
+    explanations: [],
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  await waitFor(() => expect(screen.getAllByRole('gridcell')).toHaveLength(9))
+  expect(screen.getByRole('status').textContent).toContain('Hover a cell')
 })
 
 test('each edit runs validation', async () => {

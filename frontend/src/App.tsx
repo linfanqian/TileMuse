@@ -16,6 +16,8 @@ import ViolationList from './features/violations/ViolationList'
 export default function App() {
   const [spec, setSpec] = useState<MapSpec | null>(null)
   const [map, setMap] = useState<GameMap | null>(null)
+  // Counts generated maps. A new map remounts the editor, so no hover or selection carries over.
+  const [generation, setGeneration] = useState(0)
   const [explanations, setExplanations] = useState<Explanation[]>([])
   const [error, setError] = useState<string | null>(null)
 
@@ -28,6 +30,7 @@ export default function App() {
       const result = await generate(nextSpec, seed)
       setSpec(nextSpec)
       setMap(result.map)
+      setGeneration((n) => n + 1)
       setExplanations(result.explanations)
     } catch (e) {
       setError(String(e))
@@ -64,7 +67,7 @@ export default function App() {
       {error && <p role="alert">{error}</p>}
       {map && (
         <>
-          <MapEditor map={map} onChange={handleEdit} />
+          <MapEditor key={generation} map={map} onChange={handleEdit} />
           <button onClick={handleExport}>Export Tiled JSON</button>
           <ViolationList explanations={explanations} />
         </>
