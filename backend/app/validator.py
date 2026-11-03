@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 from app.models import GameMap, MapObject, Tile, Violation
 from app.spec import MapSpec, MaxDensityRule, MinDistanceRule, ObjectKind, density
-from app.walkable import BLOCKING_KINDS, reachable
+from app.walkable import BLOCKING_KINDS, Cell, reachable
 
 Rule = Callable[[GameMap, MapSpec], list[Violation]]
 
@@ -31,13 +31,22 @@ def missing_objects(game_map: GameMap, spec: MapSpec) -> list[Violation]:
 
 
 def unreachable(game_map: GameMap, spec: MapSpec) -> list[Violation]:
-    """Doors and objects the player can't walk to from the first spawn. A chest blocks movement,
-    so it counts as reachable when the player can stand next to it."""
+    """Doors and objects the player can't walk to from the first spawn that isn't on a wall or a
+    blocking object. A chest blocks movement, so it counts as reachable when the player can stand
+    next to it."""
     spawns = _spawns(game_map)
-    if not spawns:
-        return []  # no_spawn reports it.
     blocked = {(o.x, o.y) for o in game_map.objects if o.kind in BLOCKING_KINDS}
-    walkable = reachable(game_map.tiles, blocked, (spawns[0].x, spawns[0].y))
+    walkable: set[Cell] = set()
+    for spawn in spawns:
+        walkable = reachable(game_map.tiles, blocked, (spawn.x, spawn.y))
+        if walkable:
+            break
+    if not walkable:
+        # No spawn to start from (no_spawn covers none at all), so only the spawns are reported.
+        return [
+            Violation(code="object_unreachable", x=s.x, y=s.y, details={"kind": s.kind})
+            for s in spawns
+        ]
     violations = [
         Violation(code="door_unreachable", x=x, y=y)
         for y, row in enumerate(game_map.tiles)

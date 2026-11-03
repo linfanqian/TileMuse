@@ -12,8 +12,10 @@ BLOCKING_KINDS = {ObjectKind.COVER, ObjectKind.CHEST, ObjectKind.LIGHT}
 
 
 def reachable(tiles: Sequence[Sequence[Tile]], blocked: Collection[Cell], start: Cell) -> set[Cell]:
-    """Every cell a player at `start` can walk to with BFS, moving up, down, left, and right."""
-    if start in blocked:
+    """Every cell a player at `start` can walk to with BFS, moving up, down, left, and right.
+    Empty if no one can stand at `start`."""
+    x, y = start
+    if start in blocked or tiles[y][x] == Tile.WALL:
         return set()
     seen = {start}
     queue = deque([start])
