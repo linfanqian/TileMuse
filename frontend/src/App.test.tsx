@@ -1,11 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { test, vi } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
 import * as client from './api/client'
 
 vi.mock('./api/client')
 
-test('an idea becomes a map with its issues', async () => {
+beforeEach(() => {
   vi.mocked(client.getSpec).mockResolvedValue({
     theme: 'dungeon',
     mood: 'quiet',
@@ -31,11 +31,32 @@ test('an idea becomes a map with its issues', async () => {
     violations: [],
     explanations: [],
   })
+})
+
+// Types an idea and waits for the generated map's cells.
+async function generateMap() {
   render(<App />)
   fireEvent.change(screen.getByLabelText('Map idea'), {
     target: { value: 'room' },
   })
   fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
-  await screen.findAllByRole('gridcell')
+  return screen.findAllByRole('gridcell')
+}
+
+test('an idea becomes a map with its issues', async () => {
+  await generateMap()
   screen.getByText('No issues found.')
+})
+
+test('each edit runs validation', async () => {
+  vi.mocked(client.validate).mockResolvedValue({
+    violations: [],
+    explanations: [{ code: 'door_count', text: 'Wrong number of doors.' }],
+  })
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[1]) // The door at (1, 0).
+  await screen.findByText('Wrong number of doors.')
+  const [, map] = vi.mocked(client.validate).mock.lastCall!
+  expect(map.tiles[0]).toEqual([1, 1, 1, 1])
 })
