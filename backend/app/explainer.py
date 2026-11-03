@@ -6,7 +6,7 @@ from app.models import Explanation, Violation
 
 # Violation code -> str.format template, filled from details plus code, x and y.
 TEMPLATES: dict[str, str] = {
-    "missing_object": "Not enough {kind}: the spec asks for {expected}, but the map has {found}.",
+    "missing_object": "Too few of {kind}: the spec asks for {expected}, but the map has {found}.",
     "door_count": "Wrong number of doors: the spec asks for {expected}, but the map has {found}.",
     "object_on_wall": "The {kind} at ({x}, {y}) is inside a wall.",
     "door_unreachable": "The door at ({x}, {y}) can't be reached.",

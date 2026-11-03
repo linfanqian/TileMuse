@@ -128,6 +128,17 @@ def test_map_with_nowhere_to_start_reports_only_the_doors(make_spec):
     assert codes(room(doors=[], objects=objects), make_spec()) == ["door_count"]
 
 
+def test_door_inside_the_room_does_not_count(make_spec):
+    assert codes(room(doors=[(3, 3)]), make_spec()) == ["door_count"]
+
+
+def test_blocked_door_is_reported_when_there_is_no_spawn(make_spec):
+    objects = [("cover", 3, 0), ("key", 4, 4)]
+    assert [(v.code, v.x, v.y) for v in validate(room(objects=objects), make_spec())] == [
+        ("door_unreachable", 3, 0)
+    ]
+
+
 def test_spawn_on_a_blocking_object_is_reported_alone(make_spec):
     (violation,) = validate(room(objects=[SPAWN, ("cover", 1, 1), ("key", 4, 4)]), make_spec())
     assert (violation.code, violation.details) == ("object_unreachable", {"kind": "player_spawn"})

@@ -12,11 +12,14 @@ Rule = Callable[[GameMap, MapSpec], list[Violation]]
 
 
 def _doors(game_map: GameMap) -> list[Cell]:
+    """Door tiles on the outer wall. A door tile inside the room leads nowhere, so it doesn't
+    count."""
+    w, h = game_map.width, game_map.height
     return [
         (x, y)
         for y, row in enumerate(game_map.tiles)
         for x, tile in enumerate(row)
-        if tile == Tile.DOOR
+        if tile == Tile.DOOR and (x in (0, w - 1) or y in (0, h - 1))
     ]
 
 
@@ -80,12 +83,14 @@ def _unreachable(game_map: GameMap, spec: MapSpec) -> list[Violation]:
         game_map.tiles, blocked, doors, set(doors)
     )
     if not walkable:
-        # Nowhere to start from, so nothing else can be judged. Only spawns stuck on a blocking
-        # object are reported; those on walls and the missing doors have their own rules.
+        # Nowhere to start from, so nothing else can be judged. Only doors and spawns under a
+        # blocking object are reported; spawns on walls and missing doors have their own rules.
         return [
+            Violation(code="door_unreachable", x=x, y=y) for x, y in doors if (x, y) in blocked
+        ] + [
             Violation(code="object_unreachable", x=x, y=y, details={"kind": "player_spawn"})
             for x, y in spawns
-            if game_map.tiles[y][x] != Tile.WALL
+            if (x, y) in blocked
         ]
     violations = [
         Violation(code="door_unreachable", x=x, y=y) for x, y in doors if (x, y) not in walkable

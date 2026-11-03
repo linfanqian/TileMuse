@@ -125,7 +125,7 @@ def test_validate_explains_each_violation(make_spec):
         "object_on_wall",
         "max_density",
     ]
-    assert body["explanations"][0]["text"].startswith("Not enough player spawn")
+    assert body["explanations"][0]["text"].startswith("Too few of player spawn")
 
 
 def test_rejects_map_whose_tiles_do_not_match_its_size(make_spec):
