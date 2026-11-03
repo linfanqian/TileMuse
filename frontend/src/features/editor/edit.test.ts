@@ -51,3 +51,11 @@ test('moves an object only to an empty cell', () => {
   expect(moveObject(two, { x: 1, y: 1 }, 1, 0)).toBe(two)
   expect(moveObject(map, { x: 0, y: 0 }, 1, 0)).toBe(map)
 })
+
+test('the first object wins when a cell holds more than one', () => {
+  const stacked = {
+    ...map,
+    objects: [...map.objects, { kind: 'key', x: 1, y: 1 }],
+  }
+  expect(objectAt(stacked, 1, 1)).toBe(0)
+})

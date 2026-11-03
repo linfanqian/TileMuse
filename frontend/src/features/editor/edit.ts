@@ -1,9 +1,21 @@
 // Map edits. Each returns a new map, or the same map when nothing changes.
 import type { GameMap, ObjectKind, Tile } from '../../api/client'
 
-// Index of the object on a cell, or -1. The editor keeps at most one object per cell.
+export const cellKey = (x: number, y: number) => `${x},${y}`
+
+// Object index by cellKey. The editor keeps at most one object per cell; if a map has more,
+// the first one in the list wins everywhere.
+export function indexObjects(map: GameMap): Map<string, number> {
+  const index = new Map<string, number>()
+  map.objects.forEach((o, i) => {
+    if (!index.has(cellKey(o.x, o.y))) index.set(cellKey(o.x, o.y), i)
+  })
+  return index
+}
+
+// Index of the object on a cell, or -1.
 export function objectAt(map: GameMap, x: number, y: number): number {
-  return map.objects.findIndex((o) => o.x === x && o.y === y)
+  return indexObjects(map).get(cellKey(x, y)) ?? -1
 }
 
 export function paintTile(

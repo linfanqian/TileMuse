@@ -7,7 +7,14 @@ import {
   type Ref,
 } from 'react'
 import type { GameMap, ObjectKind, Tile } from '../../api/client'
-import { eraseObject, moveObject, paintTile, placeObject } from './edit'
+import {
+  cellKey,
+  eraseObject,
+  indexObjects,
+  moveObject,
+  paintTile,
+  placeObject,
+} from './edit'
 
 const CELL = 24
 
@@ -52,15 +59,10 @@ export default function MapEditor({ map, onChange }: Props) {
   // The status line owns the hovered cell, so hovering redraws only that line, not the grid.
   const setHover = useRef<SetHover>(null)
 
-  // Object index by "x,y", built once per map instead of scanning objects for every cell.
-  const objectIndex = useMemo(() => {
-    const index = new Map<string, number>()
-    map.objects.forEach((o, i) => {
-      if (!index.has(`${o.x},${o.y}`)) index.set(`${o.x},${o.y}`, i)
-    })
-    return index
-  }, [map.objects])
-  const objectOn = (x: number, y: number) => objectIndex.get(`${x},${y}`) ?? -1
+  // Built once per map, so drawing doesn't scan every object for every cell.
+  const objectIndex = useMemo(() => indexObjects(map), [map])
+  const objectOn = (x: number, y: number) =>
+    objectIndex.get(cellKey(x, y)) ?? -1
 
   function chooseTool(next: Tool) {
     setTool(next)
@@ -102,6 +104,7 @@ export default function MapEditor({ map, onChange }: Props) {
       key={name}
       type="button"
       aria-label={plain(name)}
+      title={plain(name)}
       aria-pressed={tool === name}
       onClick={() => chooseTool(name)}
       style={{
