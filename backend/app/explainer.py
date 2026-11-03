@@ -12,11 +12,12 @@ TEMPLATES: dict[str, str] = {
     "door_unreachable": "The door at ({x}, {y}) can't be reached.",
     "object_unreachable": "The {kind} at ({x}, {y}) can't be reached.",
     "max_density": (
-        "Too many objects ({objects}): the spec allows at most {max} objects per floor tile."
+        "Too many objects ({objects}): the spec allows at most {max} objects per tile inside "
+        "the outer walls."
     ),
     "min_distance": (
-        "The {kind} at ({x}, {y}) is {distance} tiles from the {other} at "
-        "({other_x}, {other_y}). They must be at least {tiles} apart."
+        "The {kind} at ({x}, {y}) is too close to the {other} at ({other_x}, {other_y}): "
+        "distance {distance}, but the spec asks for at least {tiles}."
     ),
 }
 
