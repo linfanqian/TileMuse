@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.kits import ASSETS, read_kits
 from app.spec import ObjectKind
+from app.walkable import BLOCKING_KINDS
 
 Kind = Literal["floor", "wall", "door", "object", "decor", "character", "item"]
 Confidence = Literal["high", "medium", "low"]
@@ -130,7 +131,59 @@ class Tileset(BaseModel):
             for kind, name in kit.objects.items():
                 if entries[name].footprint != (1, 1):
                     raise ValueError(f"{theme} kit: {kind} tile {name} must fill one cell")
+            _check_blocking(theme, kit, entries)
         return self
+
+    def blocking_tiles(self, kit_name: str) -> list[int]:
+        """The sheet ids that block movement where this kit draws them, in order."""
+        entries = {e.name: e for e in self.catalog.entries}
+        return sorted(_tile_use(self.kits[kit_name], entries)[0])
+
+
+def _tile_use(kit: ThemeKit, entries: dict[str, TileEntry]) -> tuple[set[int], set[int]]:
+    """The sheet ids this kit draws where a player can't walk, and where one can. Walls block. So
+    do an opening's ends, which stand where wall cells are; its middle is the way through.
+    Entries share tiles, so this follows how the kit uses each one, not every entry that has it.
+    """
+
+    def tiles(name: str) -> list[int]:
+        return entries[name].parts or [entries[name].id]
+
+    blocking: set[int] = set()
+    walkable: set[int] = set()
+    for name in (*kit.walls.values(), kit.face_end_left, kit.face_end_right):
+        if name:
+            blocking.update(tiles(name))
+    for name in (kit.floor, kit.floor_shadow_top):
+        if name:
+            walkable.update(tiles(name))
+    for name in kit.doors.values():
+        parts = tiles(name)
+        middle = len(parts) // 2  # The part drawn on the door's own cell.
+        walkable.add(parts[middle])
+        blocking.update(part for i, part in enumerate(parts) if i != middle)
+    for name in kit.objects.values():
+        (blocking if entries[name].blocking else walkable).update(tiles(name))
+    return blocking, walkable
+
+
+def _check_blocking(theme: str, kit: ThemeKit, entries: dict[str, TileEntry]) -> None:
+    """The catalog's `blocking` must match how the kit uses each entry, and how the generator
+    and validator treat each object. A tile can't both block and be walked on in one kit, since
+    the export gives each tile one `blocking` property."""
+    walls = (*kit.walls.values(), kit.face_end_left, kit.face_end_right)
+    open_ground = (kit.floor, kit.floor_shadow_top, *kit.doors.values())
+    for names, blocks, role in ((walls, True, "wall"), (open_ground, False, "floor or door")):
+        for name in names:
+            if name and entries[name].blocking != blocks:
+                raise ValueError(f"{theme} kit: {name} is a {role}, so blocking must be {blocks}")
+    for kind, name in kit.objects.items():
+        blocks = kind in BLOCKING_KINDS
+        if entries[name].blocking != blocks:
+            raise ValueError(f"{theme} kit: {kind} tile {name} must have blocking {blocks}")
+    blocking, walkable = _tile_use(kit, entries)
+    if both := blocking & walkable:
+        raise ValueError(f"{theme} kit: tiles {sorted(both)} both block and can be walked on")
 
 
 def _require_all[T, V](found: dict[T, V], wanted: Any, label: str) -> dict[T, V]:

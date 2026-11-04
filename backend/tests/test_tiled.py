@@ -5,6 +5,7 @@ from app.models import GameMap, MapObject, Tile
 from app.spec import ObjectKind
 from app.tiled import FIRST_GID, to_tiled
 from app.tileset import load_tileset
+from app.walkable import BLOCKING_KINDS
 
 TILESET = load_tileset()
 ENTRIES = {e.name: e for e in TILESET.catalog.entries}
@@ -33,8 +34,13 @@ def gids(name: str) -> list[int]:
     return [FIRST_GID + part for part in entry.parts or [entry.id]]
 
 
+def group(out: dict, name: str) -> dict:
+    """The layer called `name`."""
+    return next(layer for layer in out["layers"] if layer["name"] == name)
+
+
 def layer(out: dict, name: str) -> list[list[int]]:
-    found = next(layer for layer in out["layers"] if layer["name"] == name)
+    found = group(out, name)
     width = found["width"]
     return [found["data"][i : i + width] for i in range(0, len(found["data"]), width)]
 
@@ -91,19 +97,60 @@ def test_every_kit_draws_each_cell_with_its_tiles(kit_name):
     assert all(walls[y][x] == 0 for y in range(2 + shift, H - 1 + shift) for x in (3, 4, 5))
 
     # Each object is a tile object on its cell. A tile object's y is its bottom edge.
-    group = next(layer for layer in out["layers"] if layer["type"] == "objectgroup")
-    for obj, kind in zip(group["objects"], ObjectKind, strict=True):
+    objects = group(out, "objects")["objects"]
+    for obj, kind in zip(objects, ObjectKind, strict=True):
         assert (obj["type"], obj["gid"]) == (kind.value, gids(kit.objects[kind])[0])
         assert obj["y"] == (4 + shift + 1) * SIZE
-    assert [obj["x"] for obj in group["objects"]] == [(1 + i) * SIZE for i in range(6)]
+    assert [obj["x"] for obj in objects] == [(1 + i) * SIZE for i in range(6)]
 
     # Every gid points at a tile on the sheet, and object ids count up from 1.
     last_gid = FIRST_GID + out["tilesets"][0]["tilecount"] - 1
     for name in ("floor", "walls"):
         assert all(0 <= gid <= last_gid for row in layer(out, name) for gid in row)
-    assert all(FIRST_GID <= obj["gid"] <= last_gid for obj in group["objects"])
-    assert [obj["id"] for obj in group["objects"]] == list(range(1, 7))
-    assert out["nextobjectid"] == 7
+    assert all(FIRST_GID <= obj["gid"] <= last_gid for obj in objects)
+    assert [obj["id"] for obj in objects] == list(range(1, 7))
+
+
+@pytest.mark.parametrize("kit_name", list(TILESET.kits))
+def test_each_door_that_leads_out_is_marked(kit_name):
+    out = to_tiled(room(), kit_name)
+    shift = out["height"] - H
+    doors = group(out, "doors")
+    assert doors["type"] == "objectgroup"
+    # One door object on each outer door's cell. The door tile inside the room isn't one.
+    marked = {(obj["x"] // SIZE, obj["y"] // SIZE - shift) for obj in doors["objects"]}
+    assert marked == set(DOORS.values())
+    for obj in doors["objects"]:
+        assert (obj["name"], obj["type"]) == ("door", "door")
+        assert (obj["width"], obj["height"]) == (SIZE, SIZE)
+        assert "gid" not in obj  # A plain rectangle, so its y is its top edge.
+    # Object ids go on from the objects layer's, and stay unique.
+    assert [obj["id"] for obj in doors["objects"]] == list(range(7, 11))
+    assert out["nextobjectid"] == 11
+    assert out["nextlayerid"] == 5
+
+
+@pytest.mark.parametrize("kit_name", list(TILESET.kits))
+def test_tiles_that_block_movement_say_so(kit_name):
+    out = to_tiled(room(), kit_name)
+    shift = out["height"] - H
+    (tileset,) = out["tilesets"]
+    blocking = set()
+    for tile in tileset["tiles"]:
+        assert tile["properties"] == [{"name": "blocking", "type": "bool", "value": True}]
+        blocking.add(tileset["firstgid"] + tile["id"])
+
+    # Floor never blocks. Every wall tile does, door ends included, but not a door's own cell.
+    assert not blocking & {gid for row in layer(out, "floor") for gid in row}
+    door_cells = {(x, y + shift) for x, y in DOORS.values()}
+    for y, row in enumerate(layer(out, "walls")):
+        for x, gid in enumerate(row):
+            if gid:
+                assert (gid in blocking) == ((x, y) not in door_cells), (x, y)
+
+    # Objects block just as they do for the generator and the validator.
+    for obj in group(out, "objects")["objects"]:
+        assert (obj["gid"] in blocking) == (ObjectKind(obj["type"]) in BLOCKING_KINDS), obj["type"]
 
 
 def test_tileset_points_at_the_sheet():
@@ -120,8 +167,7 @@ def test_tileset_points_at_the_sheet():
 
 def test_unknown_object_kind_stays_a_plain_object():
     game_map = room().model_copy(update={"objects": [MapObject(kind="statue", x=3, y=2)]})
-    group = to_tiled(game_map, "dungeon")["layers"][2]
-    (obj,) = group["objects"]
+    (obj,) = group(to_tiled(game_map, "dungeon"), "objects")["objects"]
     assert "gid" not in obj
     assert (obj["type"], obj["x"], obj["y"]) == ("statue", 3 * SIZE, (2 + 1) * SIZE)
 

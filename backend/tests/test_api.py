@@ -92,7 +92,10 @@ def test_draw_returns_the_tiles_the_export_uses(make_spec):
     for name in ("floor", "walls"):
         drawn = [0 if t is None else t + FIRST_GID for row in drawing[name] for t in row]
         assert drawn == next(layer for layer in tiled["layers"] if layer["name"] == name)["data"]
-    ((obj,), (exported,)) = drawing["objects"], tiled["layers"][2]["objects"]
+    ((obj,), (exported,)) = (
+        drawing["objects"],
+        next(layer for layer in tiled["layers"] if layer["name"] == "objects")["objects"],
+    )
     assert obj["tile"] + FIRST_GID == exported["gid"]
 
 

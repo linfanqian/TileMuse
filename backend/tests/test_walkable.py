@@ -1,6 +1,6 @@
 from app.models import Tile
 from app.tileset import load_tileset
-from app.walkable import BLOCKING_KINDS, reachable
+from app.walkable import BLOCKING_KINDS, exits, reachable
 
 F, W, D = Tile.FLOOR, Tile.WALL, Tile.DOOR
 ROOM = [
@@ -9,6 +9,18 @@ ROOM = [
     [W, F, F, W],
     [W, W, W, W],
 ]
+
+
+def test_exits_are_the_doors_on_the_outer_wall():
+    tiles = [
+        [D, W, D, W],  # A corner door counts: it is on the outer wall.
+        [W, D, F, D],  # The door at (1, 1) is inside the room, so it leads nowhere.
+        [W, F, F, W],
+        [W, D, W, W],
+    ]
+    assert exits(tiles) == [(0, 0), (2, 0), (3, 1), (1, 3)]
+    assert exits(ROOM) == [(2, 0)]
+    assert exits([[F, F], [F, F]]) == []
 
 
 def test_reaches_floors_and_doors_but_not_walls():
