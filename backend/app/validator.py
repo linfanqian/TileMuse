@@ -1,4 +1,10 @@
-"""Map -> violations. Gameplay rules only; spec schema validation lives in spec.py."""
+"""Map -> violations. Gameplay rules only; spec schema validation lives in spec.py.
+
+Hard rules make the map unplayable, so their violations are `blocking`: required objects are
+present, and every door and object can be reached (an object inside a wall can't be). The
+spec's counts and spacing rules (`door_count`, `max_density`, `min_distance`) are not, since
+fixing them may take several edits, like moving a door.
+"""
 
 from collections import Counter, defaultdict
 from collections.abc import Callable
@@ -33,6 +39,7 @@ def _missing_objects(game_map: GameMap, spec: MapSpec) -> list[Violation]:
         Violation(
             code="missing_object",
             details={"kind": req.kind.value, "expected": req.count, "found": found[req.kind]},
+            blocking=True,
         )
         for req in spec.objects
         if found[req.kind] < req.count
@@ -48,7 +55,7 @@ def _door_count(game_map: GameMap, spec: MapSpec) -> list[Violation]:
 
 def _objects_on_walls(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     return [
-        Violation(code="object_on_wall", x=o.x, y=o.y, details={"kind": o.kind})
+        Violation(code="object_on_wall", x=o.x, y=o.y, details={"kind": o.kind}, blocking=True)
         for o in game_map.objects
         if _on_wall(game_map, o)
     ]
@@ -89,13 +96,21 @@ def _unreachable(game_map: GameMap, spec: MapSpec) -> list[Violation]:
         # Nowhere to start from, so objects can't be judged. Every door is blocked or leads into
         # no room, so each is reported, with any spawn under a blocking object. Spawns on walls
         # and missing doors have their own rules.
-        return [Violation(code="door_unreachable", x=x, y=y) for x, y in doors] + [
-            Violation(code="object_unreachable", x=x, y=y, details={"kind": "player_spawn"})
+        return [Violation(code="door_unreachable", x=x, y=y, blocking=True) for x, y in doors] + [
+            Violation(
+                code="object_unreachable",
+                x=x,
+                y=y,
+                details={"kind": "player_spawn"},
+                blocking=True,
+            )
             for x, y in spawns
             if (x, y) in blocked
         ]
     violations = [
-        Violation(code="door_unreachable", x=x, y=y) for x, y in doors if (x, y) not in walkable
+        Violation(code="door_unreachable", x=x, y=y, blocking=True)
+        for x, y in doors
+        if (x, y) not in walkable
     ]
     for obj in game_map.objects:
         if _on_wall(game_map, obj):
@@ -106,7 +121,13 @@ def _unreachable(game_map: GameMap, spec: MapSpec) -> list[Violation]:
             cut_off = obj.kind not in BLOCKING_KINDS and (obj.x, obj.y) not in walkable
         if cut_off:
             violations.append(
-                Violation(code="object_unreachable", x=obj.x, y=obj.y, details={"kind": obj.kind})
+                Violation(
+                    code="object_unreachable",
+                    x=obj.x,
+                    y=obj.y,
+                    details={"kind": obj.kind},
+                    blocking=True,
+                )
             )
     return violations
 

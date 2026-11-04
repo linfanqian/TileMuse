@@ -8,6 +8,7 @@ from app.models import GameMap, MapObject, Tile
 from app.validator import validate
 
 SPAWN = ("player_spawn", 1, 1)
+SPAWN_SPEC = {"kind": "player_spawn", "count": 1}
 
 
 def room(width=8, height=6, doors=((3, 0),), objects=(SPAWN,)):
@@ -227,7 +228,8 @@ def test_min_distance(make_spec, a, b, first, second):
     }
 
 
-def test_every_code_has_a_template_that_fills(make_spec):
+def every_violation(make_spec):
+    """Maps that between them break every rule, checked against one spec."""
     spec = make_spec(
         objects=[{"kind": "player_spawn", "count": 2}, {"kind": "guard", "count": 2}],
         rules=[
@@ -245,7 +247,21 @@ def test_every_code_has_a_template_that_fills(make_spec):
     ]
     violations = [v for game_map in broken for v in validate(game_map, spec)]
     assert {v.code for v in violations} == set(TEMPLATES)
-    explain(violations)  # Raises KeyError if a template names a detail its rule doesn't set.
+    return violations
+
+
+def test_every_code_has_a_template_that_fills(make_spec):
+    # Raises KeyError if a template names a detail its rule doesn't set.
+    explain(every_violation(make_spec))
+
+
+# Rules that make a map unplayable. The editor undoes an edit that breaks one.
+HARD_CODES = {"missing_object", "object_on_wall", "door_unreachable", "object_unreachable"}
+
+
+def test_only_hard_rules_are_blocking(make_spec):
+    for violation in every_violation(make_spec):
+        assert violation.blocking == (violation.code in HARD_CODES), violation.code
 
 
 @pytest.mark.parametrize("spawns", [2, 0])
@@ -264,3 +280,42 @@ def test_generated_maps_pass(make_spec, spawns):
     spec = make_spec(width=14, height=10, doors=3, objects=objects, rules=rules)
     for seed in range(40):
         assert validate(generate(spec, Random(seed)), spec) == []
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"width": 5, "height": 5, "objects": [SPAWN_SPEC, {"kind": "cover", "count": 8}]},
+        {
+            "width": 8,
+            "height": 8,
+            "doors": 2,
+            "objects": [SPAWN_SPEC, {"kind": "cover", "count": 30}],
+        },
+        {
+            "width": 10,
+            "height": 10,
+            "objects": [
+                SPAWN_SPEC,
+                {"kind": "cover", "count": 60},
+                {"kind": "chest", "count": 2},
+                {"kind": "key", "count": 1},
+            ],
+        },
+        {
+            "width": 8,
+            "height": 8,
+            "doors": 3,
+            "objects": [{"kind": "guard", "count": 6}],
+            "rules": [{"type": "min_distance", "a": "guard", "b": "guard", "tiles": 10}],
+        },
+    ],
+    ids=["full room", "tight doors", "packed", "spacing that can't hold"],
+)
+def test_generated_maps_never_break_a_hard_rule(make_spec, fields):
+    # Spec rules may not hold in a crowded room, but the hard rules always do, so a new map
+    # never starts out unplayable.
+    spec = make_spec(**fields)
+    for seed in range(40):
+        blocking = [v for v in validate(generate(spec, Random(seed)), spec) if v.blocking]
+        assert blocking == [], seed

@@ -453,6 +453,11 @@ export interface components {
             details: {
                 [key: string]: unknown;
             };
+            /**
+             * Blocking
+             * @default false
+             */
+            blocking: boolean;
         };
     };
     responses: never;

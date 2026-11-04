@@ -39,6 +39,9 @@ class Violation(BaseModel):
     x: int | None = None
     y: int | None = None
     details: dict[str, Any] = {}
+    # True for a hard rule, one that makes the map unplayable. The editor undoes an edit that
+    # breaks one. Other rules are listed as issues the user can fix or accept.
+    blocking: bool = False
 
 
 class Explanation(BaseModel):
