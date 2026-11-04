@@ -265,6 +265,41 @@ test('a hard-rule problem the map already had does not block edits', async () =>
   expect(screen.queryByRole('alert')).toBeNull()
 })
 
+test('a click before an undo is drawn does not build on the undone edit', async () => {
+  const check = later<ValidationResult>()
+  vi.mocked(client.validate)
+    .mockReturnValueOnce(check.promise)
+    .mockResolvedValue(issues('Fine.'))
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  // The check comes back outside act, so React hasn't drawn the undo yet when the user
+  // clicks again. That click still sees the edit as being checked, and is ignored.
+  vi.spyOn(console, 'error').mockImplementation(() => {}) // React's act warning.
+  check.resolve(blocked(true))
+  for (let i = 0; i < 5; i++) await Promise.resolve() // The reply lands; no render yet.
+  expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · wall')
+  fireEvent.click(cells[6])
+  await waitFor(() =>
+    expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · floor'),
+  )
+  expect(cells[6].getAttribute('aria-label')).toBe('(2, 1) · floor')
+  expect(client.validate).toHaveBeenCalledTimes(1)
+})
+
+test('export waits until the last edit is checked', async () => {
+  const check = later<ValidationResult>()
+  vi.mocked(client.validate).mockReturnValueOnce(check.promise)
+  const cells = await generateMap()
+  const exportButton = screen.getByRole('button', { name: 'Export for Tiled' })
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  // The edit may still be undone, so it can't be exported yet.
+  expect(exportButton).toHaveProperty('disabled', true)
+  await act(async () => check.resolve(blocked(true)))
+  expect(exportButton).toHaveProperty('disabled', false)
+})
+
 test('an edit that cannot be checked is undone', async () => {
   vi.mocked(client.validate).mockRejectedValueOnce(new Error('backend down'))
   const cells = await generateMap()

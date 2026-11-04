@@ -43,14 +43,16 @@ export default function App() {
   const [actionError, setActionError] = useState<string | null>(null)
   // True while a map is being made. Edits and a second Generate are ignored until it's done.
   const [busy, setBusy] = useState(false)
+  // True while an edit is being checked. Edits wait for it, so each one is checked against a
+  // map whose issues are known, and an undo never drops a later edit. Export waits too, so it
+  // never saves an edit that may be undone. It is state, not a ref, so it turns false only
+  // when the checked map is on screen.
+  const [checking, setChecking] = useState(false)
   // Each edit, and each new map once it arrives, takes the next number. Only the newest one's
   // reply is shown, so a slow reply for an older map can't replace the current issues.
   const latest = useRef(0)
   // Bumped by Start over, so a map still being made for the old session is dropped.
   const current = useRef(0)
-  // The number of the edit being checked, or 0. Edits wait for it, so each one is checked
-  // against a map whose issues are known, and an undo never drops a later edit.
-  const checking = useRef(0)
 
   async function handleGenerate(nextSpec: MapSpec) {
     if (busy) return
@@ -64,7 +66,7 @@ export default function App() {
       if (mine !== current.current) return
       // Only now is the old map replaced, so a failed Generate keeps its pending replies.
       latest.current += 1
-      checking.current = 0 // The old map's check no longer holds up edits.
+      setChecking(false) // The old map's check no longer holds up edits.
       setSpec(nextSpec)
       setSeed(nextSeed)
       setMap(result.map)
@@ -86,7 +88,7 @@ export default function App() {
   function startOver() {
     current.current += 1
     latest.current += 1 // Drops replies for the old map's edits.
-    checking.current = 0
+    setChecking(false)
     setSession((n) => n + 1)
     setScreen('interview')
     setSpec(null)
@@ -103,10 +105,10 @@ export default function App() {
   // The edit shows at once. If it breaks a hard rule the map didn't already break, it is
   // undone and the toast says why. A problem the map already had doesn't block edits.
   async function handleEdit(next: GameMap) {
-    if (!spec || !map || busy || checking.current) return
+    if (!spec || !map || busy || checking) return
     const before = map
     const request = (latest.current += 1)
-    checking.current = request
+    setChecking(true)
     setMap(next)
     setUndone(null)
     try {
@@ -134,12 +136,13 @@ export default function App() {
       setMap(before)
       setValidateError(String(e))
     } finally {
-      if (checking.current === request) checking.current = 0
+      // A new map has already cleared it, and an edit on that map may be checking now.
+      if (request === latest.current) setChecking(false)
     }
   }
 
   async function handleExport() {
-    if (!map || !spec) return
+    if (!map || !spec || checking) return
     setActionError(null)
     try {
       const url = URL.createObjectURL(await exportMap(spec, map))
@@ -198,7 +201,9 @@ export default function App() {
             kit={spec.kit}
             onChange={handleEdit}
           />
-          <button onClick={handleExport}>Export for Tiled</button>
+          <button onClick={handleExport} disabled={checking}>
+            Export for Tiled
+          </button>
           <ViolationList explanations={explanations} />
         </div>
       )}
