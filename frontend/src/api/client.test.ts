@@ -68,5 +68,14 @@ test('a stream that ends without a result rejects', async () => {
 
 test('a failed request rejects with its status', async () => {
   respond(['{"detail":"bad"}'], 422)
-  await expect(run()).rejects.toThrow('/api/interview failed: 422')
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+  await expect(run()).rejects.toThrow(
+    'The interview request failed (422). Try again, or start over.',
+  )
+  expect(error).toHaveBeenCalledWith(
+    '/api/interview failed:',
+    422,
+    '{"detail":"bad"}',
+  )
+  error.mockRestore()
 })

@@ -76,8 +76,13 @@ export async function interview(
     body: JSON.stringify(body),
     signal,
   })
-  if (!res.ok || !res.body)
-    throw new Error(`/api/interview failed: ${res.status} ${await res.text()}`)
+  if (!res.ok || !res.body) {
+    // The details go to the console; the chat gets a sentence the user can act on.
+    console.error('/api/interview failed:', res.status, await res.text())
+    throw new Error(
+      `The interview request failed (${res.status}). Try again, or start over.`,
+    )
+  }
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''

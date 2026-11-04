@@ -193,9 +193,10 @@ function QuestionChips({
     <>
       <p className="reason">{question.reason}</p>
       <div className="chips" role="group" aria-label="Suggested answers">
-        {question.suggestions.map((s) => (
+        {question.suggestions.map((s, i) => (
           <button
-            key={s}
+            // Claude may repeat a suggestion, so the text alone isn't a unique key.
+            key={`${i}-${s}`}
             type="button"
             className="chip"
             aria-pressed={answer === s}

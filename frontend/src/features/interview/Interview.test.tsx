@@ -188,3 +188,18 @@ test('the hint tells an unfinished spec from one that does not fit', async () =>
   say('Make it 20 by 14')
   await screen.findByText("Some fields don't fit together yet")
 })
+
+test('repeated suggestions each get a chip', async () => {
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+  vi.mocked(client.interview).mockResolvedValue({
+    ...asking,
+    question: { ...asking.question!, suggestions: ['Small', 'Small'] },
+  })
+  const { say } = setup()
+  say('A creepy library')
+  await screen.findByText('How big should the room be?')
+  expect(screen.getAllByRole('button', { name: 'Small' })).toHaveLength(2)
+  // React reports a duplicate key through console.error.
+  expect(error).not.toHaveBeenCalled()
+  error.mockRestore()
+})
