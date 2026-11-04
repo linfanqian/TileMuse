@@ -69,19 +69,53 @@ type Props = {
 export default function MapEditor({ map, kit, onChange }: Props) {
   const [tool, setTool] = useState<Tool>('select')
   const [selected, setSelected] = useState<Cell | null>(null)
-  // The kit's tiles for the map, from the backend. Until the drawing for an edit arrives, the
-  // last one stays on screen. Null means draw colored cells instead.
-  const [drawing, setDrawing] = useState<Drawing | null>(null)
+  // The kit's tiles from the backend, and the map they were drawn for. A failed request keeps
+  // the last drawing. Until the canvas has painted one, every cell is drawn in color.
+  const [drawn, setDrawn] = useState<{ map: GameMap; drawing: Drawing } | null>(
+    null,
+  )
+  const [painted, setPainted] = useState(false)
   useEffect(() => {
     let current = true
     drawMap(kit, map).then(
-      (next) => current && setDrawing(next),
-      () => current && setDrawing(null),
+      (drawing) => current && setDrawn({ map, drawing }),
+      () => {},
     )
     return () => {
       current = false
     }
   }, [kit, map])
+  const art = painted ? drawn : null
+  const artIndex = useMemo(() => art && indexObjects(art.map), [art])
+  // Kinds the kit draws as tiles. Other kinds, and any object on a cell the drawing doesn't
+  // show yet, get a marker.
+  const tiledKinds = useMemo(
+    () =>
+      new Set(
+        drawn?.drawing.objects
+          .filter((o) => o.tile !== null)
+          .map((o) => o.kind),
+      ),
+    [drawn],
+  )
+
+  // True when the canvas doesn't show this cell as the map has it: an edit not drawn yet, or
+  // a door inside the room, which the kit draws as floor. Such cells are drawn in color.
+  function needsColor(x: number, y: number): boolean {
+    if (!art || !artIndex) return true
+    const tile = map.tiles[y][x]
+    const inside = x > 0 && y > 0 && x < map.width - 1 && y < map.height - 1
+    if (tile === TILE_TOOLS.door && inside) return true
+    const drawnObject = artIndex.get(cellKey(x, y))
+    const object = objectOn(x, y)
+    return (
+      art.map.tiles[y]?.[x] !== tile ||
+      (drawnObject === undefined
+        ? undefined
+        : art.map.objects[drawnObject].kind) !==
+        (object === -1 ? undefined : map.objects[object].kind)
+    )
+  }
   // The status line owns the hovered cell, so hovering redraws only that line, not the grid.
   const setHover = useRef<SetHover>(null)
 
@@ -165,10 +199,10 @@ export default function MapEditor({ map, kit, onChange }: Props) {
           position: 'relative',
           marginTop: 8,
           // A two-row top wall adds rows above the map, so the cells sit `shift` rows down.
-          paddingTop: (drawing?.shift ?? 0) * CELL,
+          paddingTop: (drawn?.drawing.shift ?? 0) * CELL,
         }}
       >
-        {drawing && <TileCanvas drawing={drawing} />}
+        {drawn && <TileCanvas drawing={drawn.drawing} onPainted={setPainted} />}
         <div
           role="grid"
           onMouseLeave={() => setHover.current?.(null)}
@@ -182,6 +216,7 @@ export default function MapEditor({ map, kit, onChange }: Props) {
             row.map((tile, x) => {
               const i = objectOn(x, y)
               const isSelected = selected?.x === x && selected.y === y
+              const color = needsColor(x, y)
               return (
                 <div
                   key={`${x},${y}`}
@@ -195,13 +230,13 @@ export default function MapEditor({ map, kit, onChange }: Props) {
                     height: CELL,
                     display: 'grid',
                     placeItems: 'center',
-                    background: drawing ? undefined : TILE_COLORS[tile],
+                    background: color ? TILE_COLORS[tile] : undefined,
                     outline: isSelected ? '2px solid #2f7de1' : undefined,
                     outlineOffset: -2,
                   }}
                 >
                   {i !== -1 &&
-                    !(drawing && hasTile(drawing, map.objects[i].kind)) && (
+                    (color || !tiledKinds.has(map.objects[i].kind)) && (
                       <Marker kind={map.objects[i].kind} size={CELL - 6} />
                     )}
                 </div>
@@ -219,11 +254,6 @@ export default function MapEditor({ map, kit, onChange }: Props) {
   )
 }
 
-// True if the drawing shows this kind with a kit tile, so no marker is needed.
-function hasTile(drawing: Drawing, kind: string): boolean {
-  return drawing.objects.some((o) => o.kind === kind && o.tile !== null)
-}
-
 // Loads the sheet once and shares it between redraws.
 let sheet: Promise<HTMLImageElement> | null = null
 function loadSheet(): Promise<HTMLImageElement> {
@@ -239,27 +269,36 @@ function loadSheet(): Promise<HTMLImageElement> {
   return sheet
 }
 
-// The kit's tiles, drawn at the sheet's own size and scaled up without smoothing.
-function TileCanvas({ drawing }: { drawing: Drawing }) {
+// The kit's tiles, drawn at the sheet's own size and scaled up without smoothing. Tells the
+// editor whether it painted, so a sheet that fails to load leaves the colored cells showing.
+function TileCanvas({
+  drawing,
+  onPainted,
+}: {
+  drawing: Drawing
+  onPainted: (painted: boolean) => void
+}) {
   const canvas = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     let current = true
     loadSheet().then(
       (image) => {
+        if (!current) return
         const context = canvas.current?.getContext('2d')
-        if (!current || !context) return
+        if (!context) return onPainted(false)
         const size = drawing.tile_size
         context.imageSmoothingEnabled = false
         context.clearRect(0, 0, drawing.width * size, drawing.height * size)
         for (const { sx, sy, dx, dy } of sprites(drawing))
           context.drawImage(image, sx, sy, size, size, dx, dy, size, size)
+        onPainted(true)
       },
-      () => {},
+      () => current && onPainted(false),
     )
     return () => {
       current = false
     }
-  }, [drawing])
+  }, [drawing, onPainted])
   return (
     <canvas
       ref={canvas}

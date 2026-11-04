@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import * as client from '../../api/client'
 import type { Drawing, GameMap } from '../../api/client'
 import MapEditor from './MapEditor'
@@ -131,6 +131,35 @@ test('hovering a cell shows its position and contents', () => {
   expect(status.textContent).toContain('(1, 1) · floor · player spawn')
 })
 
+// jsdom loads no images and has no canvas, so these stand in for both. `context` decides
+// whether the canvas can paint.
+function stubCanvas(
+  context: object | null = { drawImage: vi.fn(), clearRect: vi.fn() },
+) {
+  vi.stubGlobal(
+    'Image',
+    class {
+      onload: (() => void) | null = null
+      set src(_: string) {
+        queueMicrotask(() => this.onload?.())
+      }
+    },
+  )
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+    context as CanvasRenderingContext2D | null,
+  )
+  return context
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
+
+// Waits until the canvas has painted, which turns the cell colors off.
+const painted = (cell: HTMLElement) =>
+  waitFor(() => expect(cell.style.background).toBe(''))
+
 // A drawing for `start` with a two-row top wall, so the cells sit one row down.
 function drawingOf(map: GameMap): Drawing {
   const rows = map.height + 1
@@ -147,6 +176,7 @@ function drawingOf(map: GameMap): Drawing {
 }
 
 test('draws the kit tiles under the cells once they arrive', async () => {
+  const context = stubCanvas() as { drawImage: ReturnType<typeof vi.fn> }
   vi.mocked(client.drawMap).mockImplementation(async (_, map) => drawingOf(map))
   const { cell } = setup()
   expect(client.drawMap).toHaveBeenCalledWith('dungeon', start)
@@ -161,9 +191,10 @@ test('draws the kit tiles under the cells once they arrive', async () => {
   expect(canvas.style.width).toBe('128px')
   // The cells start one row down, under the extra top-wall row.
   expect(screen.getByRole('grid').parentElement!.style.paddingTop).toBe('32px')
-  // The spawn is a kit tile now, so its cell has no marker and no color.
+  // Once painted, the spawn is a kit tile, so its cell has no marker and no color.
+  await painted(cell(1, 1))
   expect(cell(1, 1).textContent).toBe('')
-  expect(cell(1, 1).style.background).toBe('')
+  expect(context.drawImage).toHaveBeenCalled()
   // Cells still name their contents.
   expect(cell(1, 1).getAttribute('aria-label')).toBe(
     '(1, 1) · floor · player spawn',
@@ -171,9 +202,10 @@ test('draws the kit tiles under the cells once they arrive', async () => {
 })
 
 test('edits still work over the kit tiles, and each edit is drawn again', async () => {
+  stubCanvas()
   vi.mocked(client.drawMap).mockImplementation(async (_, map) => drawingOf(map))
   const { onChange, cell, tool } = setup()
-  await waitFor(() => expect(document.querySelector('canvas')).not.toBeNull())
+  await painted(cell(2, 1))
   tool('wall')
   fireEvent.click(cell(2, 1))
   expect(onChange).toHaveBeenCalledTimes(1)
@@ -196,4 +228,53 @@ test('without the kit tiles, cells keep their colors and markers', async () => {
   expect(document.querySelector('canvas')).toBeNull()
   expect(cell(1, 1).textContent).toBe('P')
   expect(cell(0, 0).style.background).not.toBe('')
+})
+
+test('an edit shows at once, in color, until its drawing arrives', async () => {
+  stubCanvas()
+  let release = () => {}
+  vi.mocked(client.drawMap).mockImplementation(async (_, map) => {
+    if (map !== start) await new Promise<void>((r) => (release = r))
+    return drawingOf(map)
+  })
+  const { cell, tool } = setup()
+  await painted(cell(2, 1))
+
+  tool('wall')
+  fireEvent.click(cell(2, 1))
+  expect(cell(2, 1).style.background).not.toBe('') // The new wall, in color.
+  expect(cell(1, 1).style.background).toBe('') // Unchanged cells stay tiles.
+
+  tool('select')
+  fireEvent.click(cell(1, 1))
+  fireEvent.click(cell(2, 2))
+  expect(cell(2, 2).textContent).toBe('P') // The moved spawn, as a marker.
+  expect(cell(1, 1).style.background).not.toBe('') // Covers the old spawn tile.
+
+  release()
+  await painted(cell(2, 2))
+  expect(cell(2, 2).textContent).toBe('')
+})
+
+test('a door inside the room stays visible, since the kit draws it as floor', async () => {
+  stubCanvas()
+  vi.mocked(client.drawMap).mockImplementation(async (_, map) => drawingOf(map))
+  const { cell, tool } = setup()
+  await painted(cell(2, 1))
+  tool('door')
+  fireEvent.click(cell(2, 1))
+  await waitFor(() => expect(client.drawMap).toHaveBeenCalledTimes(2))
+  expect(cell(2, 1).style.background).not.toBe('')
+})
+
+test('if the canvas cannot paint, cells keep their colors and markers', async () => {
+  stubCanvas(null)
+  vi.mocked(client.drawMap).mockImplementation(async (_, map) => drawingOf(map))
+  const { cell } = setup()
+  await waitFor(() => expect(document.querySelector('canvas')).not.toBeNull())
+  await waitFor(() =>
+    expect(HTMLCanvasElement.prototype.getContext).toHaveBeenCalled(),
+  )
+  expect(cell(1, 1).textContent).toBe('P')
+  expect(cell(1, 1).style.background).not.toBe('')
 })
