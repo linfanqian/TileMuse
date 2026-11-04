@@ -189,10 +189,10 @@ test('draws the kit tiles under the cells once they arrive', async () => {
   // The canvas holds 16px tiles and is shown at 32px per cell.
   expect([canvas.width, canvas.height]).toEqual([4 * 16, 4 * 16])
   expect(canvas.style.width).toBe('128px')
-  // The cells start one row down, under the extra top-wall row.
-  expect(screen.getByRole('grid').parentElement!.style.paddingTop).toBe('32px')
   // Once painted, the spawn is a kit tile, so its cell has no marker and no color.
   await painted(cell(1, 1))
+  // The cells sit one row down, under the extra top-wall row.
+  expect(screen.getByRole('grid').parentElement!.style.paddingTop).toBe('32px')
   expect(cell(1, 1).textContent).toBe('')
   expect(context.drawImage).toHaveBeenCalled()
   // Cells still name their contents.

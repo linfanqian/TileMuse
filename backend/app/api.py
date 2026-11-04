@@ -167,7 +167,10 @@ def draw_map(req: DrawRequest) -> DrawResult:
     """The tiles the editor draws, the same ones the export uses."""
     catalog = load_tileset().catalog
     drawing = draw(req.map, req.kit)
-    return DrawResult(**drawing.model_dump(), tile_size=catalog.tile_size, columns=catalog.columns)
+    # The drawing is already checked, so it is passed on as is rather than checked again.
+    return DrawResult.model_construct(
+        **dict(drawing), tile_size=catalog.tile_size, columns=catalog.columns
+    )
 
 
 @router.get("/tilesheet.png", response_class=FileResponse)
