@@ -257,13 +257,16 @@ test('an edit shows at once, in color, until its drawing arrives', async () => {
 })
 
 test('a door inside the room stays visible, since the kit draws it as floor', async () => {
-  stubCanvas()
+  const context = stubCanvas() as { clearRect: ReturnType<typeof vi.fn> }
   vi.mocked(client.drawMap).mockImplementation(async (_, map) => drawingOf(map))
   const { cell, tool } = setup()
   await painted(cell(2, 1))
   tool('door')
   fireEvent.click(cell(2, 1))
-  await waitFor(() => expect(client.drawMap).toHaveBeenCalledTimes(2))
+  // Wait until the canvas has painted the map with the door, so the cell isn't colored
+  // only because the canvas is behind.
+  await waitFor(() => expect(context.clearRect).toHaveBeenCalledTimes(2))
+  await waitFor(() => expect(cell(1, 1).style.background).toBe(''))
   expect(cell(2, 1).style.background).not.toBe('')
 })
 
