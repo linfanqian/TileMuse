@@ -6,17 +6,26 @@ import type { ValidationResult } from './api/client'
 
 vi.mock('./api/client')
 
+const SPEC: client.MapSpec = {
+  theme: 'dungeon',
+  mood: 'quiet',
+  kit: 'dungeon',
+  width: 4,
+  height: 4,
+  doors: 1,
+  objects: [],
+  rules: [],
+}
+
 beforeEach(() => {
   vi.resetAllMocks()
-  vi.mocked(client.getSpec).mockResolvedValue({
-    theme: 'dungeon',
-    mood: 'quiet',
-    kit: 'dungeon',
-    width: 4,
-    height: 4,
-    doors: 1,
-    objects: [],
-    rules: [],
+  // One turn settles every field, so Generate map unlocks after the first idea.
+  vi.mocked(client.interview).mockResolvedValue({
+    type: 'done',
+    message: 'The spec is ready.',
+    question: null,
+    draft: SPEC,
+    spec: SPEC,
   })
   vi.mocked(client.generate).mockResolvedValue({
     map: {
@@ -51,19 +60,71 @@ const issues = (text: string): ValidationResult => ({
   explanations: [{ code: 'door_count', text }],
 })
 
-// Types an idea and waits for the generated map's cells.
+// Sends an idea, makes a map from the spec, and waits for the map's cells.
 async function generateMap() {
   render(<App />)
-  fireEvent.change(screen.getByLabelText('Map idea'), {
+  fireEvent.change(screen.getByLabelText('Message'), {
     target: { value: 'room' },
   })
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+  await screen.findByText('The spec is ready.')
+  fireEvent.click(screen.getByRole('button', { name: 'Generate map' }))
   return screen.findAllByRole('gridcell')
+}
+
+// Goes back to the interview and makes a new map from the same spec.
+function regenerate() {
+  fireEvent.click(screen.getByRole('button', { name: '1 · Interview' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Generate map' }))
 }
 
 test('an idea becomes a map with its issues', async () => {
   await generateMap()
   screen.getByText('No issues found.')
+  expect(client.generate).toHaveBeenCalledWith(SPEC, expect.any(Number))
+})
+
+test('going back to the interview keeps the chat', async () => {
+  await generateMap()
+  // Hidden on the editor, but kept.
+  expect(screen.queryByRole('log')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: '1 · Interview' }))
+  expect(screen.getByRole('log').textContent).toContain('The spec is ready.')
+  fireEvent.click(screen.getByRole('button', { name: '2 · Edit' }))
+  screen.getAllByRole('gridcell')
+})
+
+test('start over clears the map and the chat', async () => {
+  await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'Start over' }))
+  expect(screen.queryAllByRole('gridcell')).toHaveLength(0)
+  expect(screen.queryByText('The spec is ready.')).toBeNull()
+  expect(screen.getByRole('button', { name: '2 · Edit' })).toHaveProperty(
+    'disabled',
+    true,
+  )
+})
+
+test('a map that arrives after start over is dropped', async () => {
+  render(<App />)
+  fireEvent.change(screen.getByLabelText('Message'), {
+    target: { value: 'room' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+  await screen.findByText('The spec is ready.')
+  const pending = later<client.GenerateResult>()
+  vi.mocked(client.generate).mockReturnValueOnce(pending.promise)
+  fireEvent.click(screen.getByRole('button', { name: 'Generate map' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Start over' }))
+  await act(async () =>
+    pending.resolve({
+      map: { width: 1, height: 1, tiles: [[1]], objects: [] },
+      violations: [],
+      explanations: [],
+    }),
+  )
+  expect(screen.queryAllByRole('gridcell')).toHaveLength(0)
+  screen.getByLabelText('Message')
 })
 
 test('a new, smaller map starts the editor fresh', async () => {
@@ -83,7 +144,7 @@ test('a new, smaller map starts the editor fresh', async () => {
     violations: [],
     explanations: [],
   })
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  regenerate()
   await waitFor(() => expect(screen.getAllByRole('gridcell')).toHaveLength(9))
   expect(screen.getByRole('status').textContent).toContain('Hover a cell')
 })
@@ -127,7 +188,7 @@ test('a reply for the old map does not land on a new map', async () => {
     ...(await vi.mocked(client.generate).mock.results[0].value),
     explanations: [{ code: 'door_count', text: 'New map.' }],
   })
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  regenerate()
   await screen.findByText('New map.')
   await act(async () => old.resolve(issues('Old map.')))
   expect(screen.queryByText('Old map.')).toBeNull()
@@ -135,23 +196,25 @@ test('a reply for the old map does not land on a new map', async () => {
 
 test('while a map is being made, Generate is disabled and edits are ignored', async () => {
   const cells = await generateMap()
-  const spec = later<client.MapSpec>()
-  vi.mocked(client.getSpec).mockReturnValueOnce(spec.promise)
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  const result = later<client.GenerateResult>()
+  vi.mocked(client.generate).mockReturnValueOnce(result.promise)
+  regenerate()
   const button = screen.getByRole('button', { name: 'Generating…' })
   expect(button).toHaveProperty('disabled', true)
-  fireEvent.submit(button.closest('form')!)
-  expect(client.getSpec).toHaveBeenCalledTimes(2)
+  fireEvent.click(button)
+  expect(client.generate).toHaveBeenCalledTimes(2)
 
+  fireEvent.click(screen.getByRole('button', { name: '2 · Edit' }))
   fireEvent.click(screen.getByRole('button', { name: 'wall' }))
   fireEvent.click(cells[5])
   expect(client.validate).not.toHaveBeenCalled()
   expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · floor')
 
   await act(async () =>
-    spec.resolve(await vi.mocked(client.getSpec).mock.results[0].value),
+    result.resolve(await vi.mocked(client.generate).mock.results[0].value),
   )
-  await screen.findByRole('button', { name: 'Generate' })
+  fireEvent.click(screen.getByRole('button', { name: '1 · Interview' }))
+  await screen.findByRole('button', { name: 'Generate map' })
 })
 
 test('an error goes away once a later edit validates', async () => {
@@ -181,8 +244,8 @@ test('a failed Generate keeps the reply for the edit before it', async () => {
   const cells = await generateMap()
   fireEvent.click(screen.getByRole('button', { name: 'wall' }))
   fireEvent.click(cells[5])
-  vi.mocked(client.getSpec).mockRejectedValueOnce(new Error('LLM down'))
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  vi.mocked(client.generate).mockRejectedValueOnce(new Error('generate down'))
+  regenerate()
   await screen.findByRole('alert')
   await act(async () => pending.resolve(issues('After the edit.')))
   screen.getByText('After the edit.')
@@ -191,13 +254,14 @@ test('a failed Generate keeps the reply for the edit before it', async () => {
 test('a good validation does not clear a Generate error', async () => {
   vi.mocked(client.validate).mockResolvedValue(issues('Fine.'))
   const cells = await generateMap()
-  vi.mocked(client.getSpec).mockRejectedValueOnce(new Error('LLM down'))
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  vi.mocked(client.generate).mockRejectedValueOnce(new Error('generate down'))
+  regenerate()
   await screen.findByRole('alert')
+  fireEvent.click(screen.getByRole('button', { name: '2 · Edit' }))
   fireEvent.click(screen.getByRole('button', { name: 'wall' }))
   fireEvent.click(cells[5])
   await screen.findByText('Fine.')
-  expect(screen.getByRole('alert').textContent).toContain('LLM down')
+  expect(screen.getByRole('alert').textContent).toContain('generate down')
 })
 
 test('a new map clears a validation error from the old map', async () => {
@@ -206,15 +270,15 @@ test('a new map clears a validation error from the old map', async () => {
   const cells = await generateMap()
   fireEvent.click(screen.getByRole('button', { name: 'wall' }))
   fireEvent.click(cells[5])
-  const spec = later<client.MapSpec>()
-  vi.mocked(client.getSpec).mockReturnValueOnce(spec.promise)
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  const result = later<client.GenerateResult>()
+  vi.mocked(client.generate).mockReturnValueOnce(result.promise)
+  regenerate()
   await act(async () => failing.reject(new Error('backend down')))
   screen.getByRole('alert')
   await act(async () =>
-    spec.resolve(await vi.mocked(client.getSpec).mock.results[0].value),
+    result.resolve(await vi.mocked(client.generate).mock.results[0].value),
   )
-  await screen.findByRole('button', { name: 'Generate' })
+  await screen.findAllByRole('gridcell')
   expect(screen.queryByRole('alert')).toBeNull()
 })
 
@@ -223,16 +287,17 @@ test('a failed validation does not replace a Generate error', async () => {
     .mockRejectedValueOnce(new Error('backend down'))
     .mockResolvedValueOnce(issues('Fine.'))
   const cells = await generateMap()
-  vi.mocked(client.getSpec).mockRejectedValueOnce(new Error('LLM down'))
-  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  vi.mocked(client.generate).mockRejectedValueOnce(new Error('generate down'))
+  regenerate()
   await screen.findByRole('alert')
+  fireEvent.click(screen.getByRole('button', { name: '2 · Edit' }))
   fireEvent.click(screen.getByRole('button', { name: 'wall' }))
   fireEvent.click(cells[5])
   await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2))
   fireEvent.click(cells[6])
   await screen.findByText('Fine.')
   const [alert] = screen.getAllByRole('alert')
-  expect(alert.textContent).toContain('LLM down')
+  expect(alert.textContent).toContain('generate down')
   expect(screen.getAllByRole('alert')).toHaveLength(1)
 })
 

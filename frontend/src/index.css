@@ -1,0 +1,50 @@
+:root {
+  --accent: #3d4ef5;
+  --text: #1d1d24;
+  --text-muted: #6b6b76;
+  --border: #e2e2e8;
+  --surface: #ffffff;
+  --surface-muted: #f6f5f2;
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+  line-height: 1.45;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+}
+
+#root {
+  height: 100vh;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+button.primary {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 16px;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+
+button.primary:disabled {
+  opacity: 0.45;
+}
+
+.error {
+  color: #b42318;
+}
