@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { MAX_SEED, parseSeed, randomSeed } from './seed'
 import './SeedDialog.css'
 
@@ -12,6 +12,8 @@ type Props = {
 export default function SeedDialog({ seed, onCancel, onRegenerate }: Props) {
   const [text, setText] = useState(String(seed))
   const next = parseSeed(text)
+  // Where the last press began. A drag from the input that ends outside isn't a click outside.
+  const pressedOutside = useRef(false)
 
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -19,14 +21,21 @@ export default function SeedDialog({ seed, onCancel, onRegenerate }: Props) {
   }
 
   return (
-    <div className="dialog-backdrop" onClick={onCancel}>
+    <div
+      className="dialog-backdrop"
+      onMouseDown={(e) =>
+        (pressedOutside.current = e.target === e.currentTarget)
+      }
+      onClick={(e) => {
+        if (pressedOutside.current && e.target === e.currentTarget) onCancel()
+      }}
+    >
       <form
         role="dialog"
         aria-modal="true"
         aria-labelledby="seed-dialog-title"
         className="dialog"
         onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.key === 'Escape' && onCancel()}
       >
         <h2 id="seed-dialog-title">Regenerate the map</h2>

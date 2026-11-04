@@ -573,7 +573,7 @@ test('Random picks a new seed, and Cancel leaves the map as it is', async () => 
   screen.getByRole('button', { name: seedButton(2 ** 30) })
 })
 
-test('Show on map outlines the issue cell until the map changes', async () => {
+test('Show on map outlines the issue cell until the issues change', async () => {
   vi.mocked(client.generate).mockResolvedValue({
     ...(await client.generate(SPEC, 0)),
     violations: [
@@ -586,7 +586,29 @@ test('Show on map outlines the issue cell until the map changes', async () => {
       },
     ],
   })
-  vi.mocked(client.validate).mockResolvedValue(issues('Fine.'))
+  const door = {
+    code: 'door_unreachable',
+    x: 1,
+    y: 0,
+    details: {},
+    blocking: true,
+  }
+  vi.mocked(client.validate)
+    // The first edit adds a new hard-rule problem, so it is undone.
+    .mockResolvedValueOnce({
+      violations: [
+        door,
+        { code: 'object_on_wall', x: 2, y: 1, details: {}, blocking: true },
+      ],
+      explanations: [
+        {
+          code: 'door_unreachable',
+          text: "The door at (1, 0) can't be reached.",
+        },
+        { code: 'object_on_wall', text: 'In a wall.' },
+      ],
+    })
+    .mockResolvedValue(issues('Fine.'))
   const cells = await generateMap()
   const issues_ = screen.getByRole('region', { name: /Issues/ })
   within(issues_).getByText("The door at (1, 0) can't be reached.")
@@ -595,6 +617,11 @@ test('Show on map outlines the issue cell until the map changes', async () => {
   expect(cells[0].style.boxShadow).toBe('')
 
   fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[6])
+  await screen.findByText(/Edit undone/)
+  // The map and its issues are as before, so the outline stays.
+  expect(cells[1].style.boxShadow).not.toBe('')
+
   fireEvent.click(cells[5])
   await screen.findByText('Fine.')
   expect(cells[1].style.boxShadow).toBe('')

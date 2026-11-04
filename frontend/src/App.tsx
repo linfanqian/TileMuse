@@ -39,7 +39,7 @@ export default function App() {
   const [seedOpen, setSeedOpen] = useState(false)
   // The interview chat that led to the map, shown in the editor's Chat tab.
   const [chat, setChat] = useState<Turn[]>([])
-  // The cell an issue's "Show on map" points at. Cleared when the map changes.
+  // The cell an issue's "Show on map" points at. Cleared when the issues change.
   const [shown, setShown] = useState<{ x: number; y: number } | null>(null)
   // Counts generated maps. A new map remounts the editor, so no hover or selection carries over.
   const [generation, setGeneration] = useState(0)
@@ -130,7 +130,6 @@ export default function App() {
     const request = (latest.current += 1)
     setChecking(true)
     setMap(next)
-    setShown(null)
     setUndone(null)
     try {
       const result = await validate(spec, next)
@@ -148,6 +147,7 @@ export default function App() {
       } else {
         setViolations(result.violations)
         setExplanations(result.explanations)
+        setShown(null) // The issue it pointed at may be gone.
       }
       setValidateError(null)
     } catch (e) {

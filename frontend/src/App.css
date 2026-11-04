@@ -130,6 +130,8 @@
   background: #1d1d24;
   color: white;
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+  /* Clicks pass through, so the cells under it can still be edited. */
+  pointer-events: none;
 }
 
 @media (max-width: 1000px) {

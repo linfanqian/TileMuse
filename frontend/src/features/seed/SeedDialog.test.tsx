@@ -42,8 +42,20 @@ test('Escape and a click outside the dialog both cancel', () => {
   const { input, onCancel } = setup()
   fireEvent.keyDown(input, { key: 'Escape' })
   expect(onCancel).toHaveBeenCalledTimes(1)
+  const backdrop = screen.getByRole('dialog').parentElement!
+  // A click inside doesn't.
+  fireEvent.mouseDown(screen.getByRole('dialog'))
   fireEvent.click(screen.getByRole('dialog'))
-  expect(onCancel).toHaveBeenCalledTimes(1) // A click inside doesn't.
-  fireEvent.click(screen.getByRole('dialog').parentElement!)
+  expect(onCancel).toHaveBeenCalledTimes(1)
+  fireEvent.mouseDown(backdrop)
+  fireEvent.click(backdrop)
   expect(onCancel).toHaveBeenCalledTimes(2)
+})
+
+test('a drag from the input that ends outside does not cancel', () => {
+  const { input, onCancel } = setup()
+  // The browser sends the click to the backdrop, since the press and release had only it in common.
+  fireEvent.mouseDown(input)
+  fireEvent.click(screen.getByRole('dialog').parentElement!)
+  expect(onCancel).not.toHaveBeenCalled()
 })
