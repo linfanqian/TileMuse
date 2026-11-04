@@ -178,7 +178,7 @@ test('each edit runs validation', async () => {
   expect(map.tiles[0]).toEqual([1, 1, 1, 1])
 })
 
-test('an edit waits until the one before it is checked', async () => {
+test('an edit made while the last one is checked is ignored', async () => {
   const first = later<ValidationResult>()
   vi.mocked(client.validate)
     .mockReturnValueOnce(first.promise)
