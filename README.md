@@ -17,4 +17,4 @@ npm install
 npm run dev
 ```
 
-Copy `backend/.env.example` to `backend/.env` and set `ANTHROPIC_API_KEY`. Without it, `/api/spec` returns 503. Generation, validation, and export don't need it.
+Copy `backend/.env.example` to `backend/.env` and set `ANTHROPIC_API_KEY`. Without it, the interview (`/api/interview`) reports an error. Generation, validation, and export don't need it.

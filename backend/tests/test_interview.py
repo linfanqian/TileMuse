@@ -7,42 +7,24 @@ import pytest
 from app.interview import (
     INTERVIEW_SYSTEM,
     MAX_MESSAGE,
-    SYSTEM,
     ChatMessage,
     InterviewResult,
     Question,
     _Turn,
-    idea_to_spec,
     interview,
 )
 from app.llm import LLMError, TextDelta
-from app.spec import Kit, MapSpec, SpecDraft, SpecField
+from app.spec import Kit, SpecDraft, SpecField
 
 
-@pytest.mark.parametrize("system", [SYSTEM, INTERVIEW_SYSTEM])
-def test_prompt_describes_every_kit(system):
-    assert all(f"{kit} for " in system for kit in get_args(Kit))
-
-
-def test_idea_to_spec_returns_spec_from_llm(fake_llm, make_spec):
-    spec = make_spec(
-        theme="abandoned library",
-        mood="creepy",
-        objects=[{"kind": "player_spawn", "count": 1}, {"kind": "guard", "count": 2}],
-        rules=[{"type": "min_distance", "a": "guard", "b": "player_spawn", "tiles": 5}],
-    )
-    fake_llm.reply(spec.model_dump_json())
-    idea = "a creepy abandoned library where the player sneaks past guards"
-    assert asyncio.run(idea_to_spec(idea)) == spec
-    (request,) = fake_llm.requests
-    assert request["messages"] == [{"role": "user", "content": idea}]
-    assert request["output_config"]["format"]["schema"] == anthropic.transform_schema(MapSpec)
+def test_prompt_describes_every_kit():
+    assert all(f"{kit} for " in INTERVIEW_SYSTEM for kit in get_args(Kit))
 
 
 def test_prompt_names_the_rule_tags():
     # The schema requires the tag too; stating it saves a retry when Claude leaves it out.
     for tag in ('"type": "max_density"', '"type": "min_distance"'):
-        assert tag in SYSTEM
+        assert tag in INTERVIEW_SYSTEM
 
 
 IDEA = [ChatMessage(role="user", content="a creepy library where the player sneaks past guards")]

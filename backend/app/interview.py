@@ -1,8 +1,4 @@
-"""Idea -> spec. The LLM only fills in the spec; it never produces maps.
-
-`interview` asks one question per turn. `idea_to_spec` is the one-shot path behind /api/spec,
-removed once the frontend moves to the interview (#23).
-"""
+"""Idea -> spec, one question per turn. The LLM only fills in the spec; it never produces maps."""
 
 import logging
 from collections.abc import AsyncIterator, Sequence
@@ -12,7 +8,7 @@ from typing import Annotated, Literal, Self
 from anthropic.types.beta import BetaMessageParam
 from pydantic import BaseModel, Field, StringConstraints, ValidationError, model_validator
 
-from app.llm import Done, LLMError, TextDelta, complete, stream
+from app.llm import Done, LLMError, TextDelta, stream
 from app.spec import (
     Doors,
     Kit,
@@ -48,13 +44,6 @@ The spec must be consistent:
 At most one min_distance per pair of kinds: both kinds are in objects, a pair of the same kind \
 needs a count of at least 2, and tiles is at most (width - 3) + (height - 3)."""
 
-SYSTEM = f"""\
-You turn a rough idea for a top-down 2D game map into a design spec for one walled room.
-Fill every field from the idea. Where the idea says nothing, choose values that fit its theme \
-and mood.
-
-{_SPEC_RULES}"""
-
 INTERVIEW_SYSTEM = f"""\
 You interview a user, who may have no design training, to turn their rough idea for a top-down \
 2D game map into a design spec for one walled room.
@@ -77,10 +66,6 @@ generate. The spec panel already shows every field, so don't list them.
 - Write plain text with no Markdown: the chat shows it as is.
 
 {_SPEC_RULES}"""
-
-
-async def idea_to_spec(idea: str) -> MapSpec:
-    return await complete(SYSTEM, [{"role": "user", "content": idea}], output=MapSpec)
 
 
 # Characters per chat message. Bounds the LLM's token cost, with the API's cap on the number of
