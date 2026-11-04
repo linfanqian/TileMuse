@@ -2,6 +2,9 @@
 
 The map is drawn with its kit's tiles (see drawing.py), on three layers: floor, walls, and
 objects. The tileset points to `tilesheet.png`, which must sit next to the exported file.
+
+Checked with Tiled 1.12.2 for every kit: `tmxrasterizer` draws the export as expected, and
+`tiled --export-map json` re-saves it with the same layers, tiles, and object types.
 """
 
 from typing import Any
