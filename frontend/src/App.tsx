@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import {
-  exportTiled,
+  exportMap,
   generate,
   getSpec,
   validate,
@@ -69,14 +69,16 @@ export default function App() {
   }
 
   async function handleExport() {
-    if (!map) return
+    if (!map || !spec) return
     setActionError(null)
     try {
-      const tiled = await exportTiled(map)
+      const url = URL.createObjectURL(await exportMap(spec, map))
       const a = document.createElement('a')
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(tiled, null, 2)]))
-      a.download = 'map.tmj'
+      a.href = url
+      a.download = 'tilemuse-map.zip'
       a.click()
+      // The click has started the download, so the URL can be freed once this task ends.
+      setTimeout(() => URL.revokeObjectURL(url))
     } catch (e) {
       setActionError(String(e))
     }
