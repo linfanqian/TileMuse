@@ -174,7 +174,8 @@ export default function MapEditor({
   )
   // The kit's tiles for a tool, once a drawing has said what they are.
   const kitIcon = (name: string, fallback: ReactNode) => {
-    const tiles = drawn?.drawing.tools[name]
+    // `?.` too, so a backend from before `tools` existed still gets the fallback.
+    const tiles = drawn?.drawing.tools?.[name]
     if (!drawn || !tiles) return fallback
     return (
       <ToolIcon tiles={tiles} drawing={drawn.drawing} fallback={fallback} />

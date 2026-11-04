@@ -39,8 +39,7 @@
   opacity: 0.6;
 }
 
-.topbar .start-over,
-.map-actions button:not(.primary) {
+.topbar .start-over {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 6px 14px;
@@ -51,7 +50,7 @@
   margin-left: auto;
 }
 
-/* Seed, Regenerate, and Export, shown on the editor screen. */
+/* The seed and Export, shown on the editor screen. */
 .map-actions {
   display: flex;
   align-items: center;

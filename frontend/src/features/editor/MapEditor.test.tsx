@@ -404,3 +404,20 @@ test('the tool buttons show the kit tiles once a drawing says what they are', as
   // A kind the drawing has no tiles for keeps its marker.
   expect(button('guard').textContent).toBe('G')
 })
+
+test('a drawing without tool tiles keeps the colored tools', async () => {
+  stubCanvas()
+  // As an older backend sends it, before `tools` existed.
+  vi.mocked(client.drawMap).mockImplementation(async (_, map) => {
+    const { tools: _tools, ...drawing } = drawingOf(map)
+    return drawing as Drawing
+  })
+  const { cell } = setup()
+  await painted(cell(2, 1))
+  expect(
+    screen.getByRole('button', { name: 'wall' }).querySelector('canvas'),
+  ).toBeNull()
+  expect(screen.getByRole('button', { name: 'player spawn' }).textContent).toBe(
+    'P',
+  )
+})

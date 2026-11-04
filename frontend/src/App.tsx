@@ -205,6 +205,7 @@ export default function App() {
               <button
                 className="seed-value"
                 title="Change the seed to regenerate the map"
+                aria-label={`Seed ${seed}. Change it to regenerate the map.`}
                 onClick={() => setSeedOpen(true)}
                 disabled={busy}
               >
