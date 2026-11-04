@@ -2,20 +2,25 @@ import { useRef, useState } from 'react'
 import {
   exportMap,
   generate,
-  getSpec,
   validate,
   type Explanation,
   type GameMap,
   type MapSpec,
 } from './api/client'
-import ChatPanel from './features/chat/ChatPanel'
+import Interview from './features/interview/Interview'
 import MapEditor from './features/editor/MapEditor'
 import ViolationList from './features/violations/ViolationList'
+import './App.css'
+
+type Screen = 'interview' | 'editor'
 
 const REVOKE_AFTER_MS = 60_000
 
 // Composes the features. Features never import each other; shared state lives here.
 export default function App() {
+  const [screen, setScreen] = useState<Screen>('interview')
+  // Start over remounts the interview with this key, so its chat and draft start empty.
+  const [session, setSession] = useState(0)
   const [spec, setSpec] = useState<MapSpec | null>(null)
   const [map, setMap] = useState<GameMap | null>(null)
   const [seed, setSeed] = useState<number | null>(null)
@@ -31,16 +36,19 @@ export default function App() {
   // Each edit, and each new map once it arrives, takes the next number. Only the newest one's
   // reply is shown, so a slow reply for an older map can't replace the current issues.
   const latest = useRef(0)
+  // Bumped by Start over, so a map still being made for the old session is dropped.
+  const current = useRef(0)
 
-  async function handleIdea(idea: string) {
+  async function handleGenerate(nextSpec: MapSpec) {
     if (busy) return
+    const mine = current.current
     setBusy(true)
     setActionError(null)
     try {
-      const nextSpec = await getSpec(idea)
       // Math.random only picks the seed; the backend generator is deterministic given it.
       const nextSeed = Math.floor(Math.random() * 2 ** 31)
       const result = await generate(nextSpec, nextSeed)
+      if (mine !== current.current) return
       // Only now is the old map replaced, so a failed Generate keeps its pending replies.
       latest.current += 1
       setSpec(nextSpec)
@@ -49,11 +57,26 @@ export default function App() {
       setGeneration((n) => n + 1)
       setExplanations(result.explanations)
       setValidateError(null)
+      setScreen('editor')
     } catch (e) {
-      setActionError(String(e))
+      if (mine === current.current) setActionError(String(e))
     } finally {
-      setBusy(false)
+      if (mine === current.current) setBusy(false)
     }
+  }
+
+  function startOver() {
+    current.current += 1
+    latest.current += 1 // Drops replies for the old map's edits.
+    setSession((n) => n + 1)
+    setScreen('interview')
+    setSpec(null)
+    setMap(null)
+    setSeed(null)
+    setExplanations([])
+    setValidateError(null)
+    setActionError(null)
+    setBusy(false)
   }
 
   async function handleEdit(next: GameMap) {
@@ -88,18 +111,45 @@ export default function App() {
   }
 
   return (
-    <main>
-      <h1>TileMuse</h1>
-      <ChatPanel onSubmit={handleIdea} busy={busy} />
+    <main className="app">
+      <header className="topbar">
+        <h1>TileMuse</h1>
+        <nav className="steps" aria-label="Steps">
+          <button
+            aria-current={screen === 'interview' ? 'step' : undefined}
+            onClick={() => setScreen('interview')}
+          >
+            1 · Interview
+          </button>
+          <button
+            aria-current={screen === 'editor' ? 'step' : undefined}
+            disabled={!map}
+            onClick={() => setScreen('editor')}
+          >
+            2 · Edit
+          </button>
+        </nav>
+        <button className="start-over" onClick={startOver}>
+          Start over
+        </button>
+      </header>
       {actionError && <p role="alert">{actionError}</p>}
       {validateError && <p role="alert">{validateError}</p>}
+      {/* Hidden, not unmounted, so going back keeps the chat and the draft. */}
+      <div className="screen" hidden={screen !== 'interview'}>
+        <Interview
+          key={session}
+          onGenerate={handleGenerate}
+          generating={busy}
+        />
+      </div>
       {map && (
-        <>
+        <div className="screen editor-screen" hidden={screen !== 'editor'}>
           <p>Seed: {seed}</p>
           <MapEditor key={generation} map={map} onChange={handleEdit} />
           <button onClick={handleExport}>Export for Tiled</button>
           <ViolationList explanations={explanations} />
-        </>
+        </div>
       )}
     </main>
   )

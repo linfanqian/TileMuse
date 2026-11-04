@@ -9,12 +9,12 @@ from contextlib import aclosing
 from random import Random
 from typing import Annotated, Literal, Self
 
-from fastapi import APIRouter, HTTPException, Response
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from fastapi import APIRouter, Response
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.explainer import explain
 from app.generator import generate
-from app.interview import MAX_MESSAGE, ChatMessage, InterviewResult, idea_to_spec, interview
+from app.interview import ChatMessage, InterviewResult, interview
 from app.kits import ASSETS
 from app.llm import LLMError, LLMUnavailable, TextDelta
 from app.models import Explanation, GameMap, Violation
@@ -25,13 +25,6 @@ from app.validator import validate
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-class SpecRequest(BaseModel):
-    # Bounds the LLM's token cost. A blank idea would still cost a call.
-    idea: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE)
-    ]
 
 
 MAX_MESSAGES = 39
@@ -120,18 +113,6 @@ def check(game_map: GameMap, spec: MapSpec) -> ValidationResult:
 @router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
-
-
-@router.post("/spec")
-async def spec(req: SpecRequest) -> MapSpec:
-    try:
-        return await idea_to_spec(req.idea)
-    except LLMUnavailable as e:
-        raise HTTPException(503, str(e)) from e
-    except LLMError as e:
-        raise HTTPException(
-            502, "Couldn't get a valid spec from the LLM. Try again or rephrase the idea."
-        ) from e
 
 
 @router.post("/interview")

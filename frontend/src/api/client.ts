@@ -11,6 +11,9 @@ export type Explanation = Schemas['Explanation']
 export type GenerateResult = Schemas['GenerateResult']
 export type ValidationResult = Schemas['ValidationResult']
 export type SpecDraft = Schemas['SpecDraft']
+export type ChatMessage = Schemas['ChatMessage']
+export type Question = Schemas['Question']
+export type InterviewDone = Schemas['InterviewDone']
 // /api/interview streams one of these per JSON line. schema.d.ts lists the
 // models but types the route's response as unknown, so the union is built here.
 export type InterviewEvent =
@@ -47,8 +50,6 @@ async function post<P extends PostPath>(
   return res.json() as Promise<Result<P>>
 }
 
-export const getSpec = (idea: string) => post('/api/spec', { idea })
-
 export const generate = (spec: MapSpec, seed: number) =>
   post('/api/generate', { spec, seed })
 
@@ -69,4 +70,53 @@ export async function exportMap(spec: MapSpec, map: GameMap): Promise<Blob> {
   if (!res.ok)
     throw new Error(`/api/export failed: ${res.status} ${await res.text()}`)
   return new Blob([await res.arrayBuffer()], { type: 'application/zip' })
+}
+
+/**
+ * Runs one interview turn. Calls `onText` with each piece of Claude's message as it streams,
+ * then resolves with the finished turn. Rejects on an error event, a failed request, or a
+ * stream that ends without a result. Streamed text is only a preview: show `message` once done.
+ */
+export async function interview(
+  messages: ChatMessage[],
+  draft: SpecDraft,
+  onText: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<InterviewDone> {
+  const body: Schemas['InterviewRequest'] = { messages, draft }
+  const res = await fetch('/api/interview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  })
+  if (!res.ok || !res.body) {
+    // The details go to the console; the chat gets a sentence the user can act on.
+    console.error('/api/interview failed:', res.status, await res.text())
+    throw new Error(
+      `The interview request failed (${res.status}). Try again, or start over.`,
+    )
+  }
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      buffer += decoder.decode(value, { stream: !done })
+      const lines = buffer.split('\n')
+      // The last piece may be a partial line, unless the stream is over.
+      buffer = done ? '' : lines.pop()!
+      for (const line of lines) {
+        if (!line.trim()) continue
+        const event = JSON.parse(line) as InterviewEvent
+        if (event.type === 'text') onText(event.text)
+        else if (event.type === 'done') return event
+        else throw new Error(event.message)
+      }
+      if (done) throw new Error('The interview reply was cut off. Try again.')
+    }
+  } finally {
+    reader.cancel().catch(() => {})
+  }
 }

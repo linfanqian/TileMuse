@@ -1,0 +1,62 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.steps {
+  display: flex;
+  gap: 8px;
+}
+
+.steps button {
+  border: none;
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+
+.steps button[aria-current='step'] {
+  background: #e6e8ff;
+  color: var(--accent);
+}
+
+.steps button:disabled {
+  opacity: 0.6;
+}
+
+.topbar .start-over {
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  background: var(--surface);
+}
+
+.app > [role='alert'] {
+  margin: 8px 20px;
+}
+
+.screen {
+  flex: 1;
+  min-height: 0;
+}
+
+.editor-screen {
+  padding: 20px;
+  overflow: auto;
+}
