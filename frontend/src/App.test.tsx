@@ -178,20 +178,139 @@ test('each edit runs validation', async () => {
   expect(map.tiles[0]).toEqual([1, 1, 1, 1])
 })
 
-test('a slow reply for an older edit does not replace newer issues', async () => {
-  const older = later<ValidationResult>()
-  const newer = later<ValidationResult>()
+test('an edit made while the last one is checked is ignored', async () => {
+  const first = later<ValidationResult>()
   vi.mocked(client.validate)
-    .mockReturnValueOnce(older.promise)
-    .mockReturnValueOnce(newer.promise)
+    .mockReturnValueOnce(first.promise)
+    .mockResolvedValueOnce(issues('Second.'))
   const cells = await generateMap()
   fireEvent.click(screen.getByRole('button', { name: 'wall' }))
   fireEvent.click(cells[5])
+  fireEvent.click(cells[6]) // Ignored: the first edit is still being checked.
+  expect(client.validate).toHaveBeenCalledTimes(1)
+  expect(cells[6].getAttribute('aria-label')).toBe('(2, 1) · floor')
+
+  await act(async () => first.resolve(issues('First.')))
   fireEvent.click(cells[6])
-  await act(async () => newer.resolve(issues('Newer.')))
-  await act(async () => older.resolve(issues('Older.')))
-  screen.getByText('Newer.')
-  expect(screen.queryByText('Older.')).toBeNull()
+  await screen.findByText('Second.')
+  expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · wall')
+  expect(cells[6].getAttribute('aria-label')).toBe('(2, 1) · wall')
+})
+
+// A check that finds the door at (1, 0) cut off, as a hard rule or not.
+const blocked = (blocking: boolean): ValidationResult => ({
+  violations: [{ code: 'door_unreachable', x: 1, y: 0, details: {}, blocking }],
+  explanations: [
+    { code: 'door_unreachable', text: "The door at (1, 0) can't be reached." },
+  ],
+})
+
+test('an edit that breaks a hard rule is undone, and the toast says why', async () => {
+  vi.mocked(client.validate)
+    .mockResolvedValueOnce(blocked(true))
+    .mockResolvedValueOnce(issues('Fine.'))
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  const toast = await screen.findByRole('alert')
+  expect(toast.textContent).toBe(
+    "Edit undone. The door at (1, 0) can't be reached.",
+  )
+  expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · floor')
+  // The issues are still the map's own, not the undone edit's.
+  screen.getByText('No issues found.')
+
+  fireEvent.click(cells[6]) // The next edit clears the toast.
+  await screen.findByText('Fine.')
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(cells[6].getAttribute('aria-label')).toBe('(2, 1) · wall')
+})
+
+test('a spec-rule issue does not undo the edit', async () => {
+  vi.mocked(client.validate).mockResolvedValue(blocked(false))
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  await screen.findByText("The door at (1, 0) can't be reached.")
+  expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · wall')
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test('a hard-rule problem the map already had does not block edits', async () => {
+  const missing = (found: number): client.Violation => ({
+    code: 'missing_object',
+    details: { kind: 'chest', expected: 2, found },
+    blocking: true,
+  })
+  const text = (found: number) => ({
+    code: 'missing_object',
+    text: `Too few chests: ${found}.`,
+  })
+  vi.mocked(client.generate).mockResolvedValue({
+    ...(await client.generate(SPEC, 0)),
+    violations: [missing(1)],
+    explanations: [text(1)],
+  })
+  // The edit leaves fewer chests, but it's the same problem, so the edit stays.
+  vi.mocked(client.validate).mockResolvedValue({
+    violations: [missing(0)],
+    explanations: [text(0)],
+  })
+  const cells = await generateMap()
+  screen.getByText('Too few chests: 1.')
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  await screen.findByText('Too few chests: 0.')
+  expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · wall')
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test('a click before an undo is drawn does not build on the undone edit', async () => {
+  const check = later<ValidationResult>()
+  vi.mocked(client.validate)
+    .mockReturnValueOnce(check.promise)
+    .mockResolvedValue(issues('Fine.'))
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  // The check comes back outside act, so React hasn't drawn the undo yet when the user
+  // clicks again. That click still sees the edit as being checked, and is ignored. (With
+  // `checking` as a ref, cleared before the redraw, this test fails.)
+  vi.spyOn(console, 'error').mockImplementation(() => {}) // React's act warning.
+  check.resolve(blocked(true))
+  for (let i = 0; i < 5; i++) await Promise.resolve() // The reply lands; no render yet.
+  expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · wall')
+  fireEvent.click(cells[6])
+  await waitFor(() =>
+    expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · floor'),
+  )
+  expect(cells[6].getAttribute('aria-label')).toBe('(2, 1) · floor')
+  expect(client.validate).toHaveBeenCalledTimes(1)
+})
+
+test('export waits until the last edit is checked', async () => {
+  const check = later<ValidationResult>()
+  vi.mocked(client.validate).mockReturnValueOnce(check.promise)
+  const cells = await generateMap()
+  const exportButton = screen.getByRole('button', { name: 'Export for Tiled' })
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  // The edit may still be undone, so it can't be exported yet.
+  expect(exportButton).toHaveProperty('disabled', true)
+  await act(async () => check.resolve(blocked(true)))
+  expect(exportButton).toHaveProperty('disabled', false)
+})
+
+test('an edit that cannot be checked is undone', async () => {
+  vi.mocked(client.validate).mockRejectedValueOnce(new Error('backend down'))
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toBe(
+    "Edit undone, since it couldn't be checked. Error: backend down",
+  )
+  expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · floor')
 })
 
 test('a reply for the old map does not land on a new map', async () => {
