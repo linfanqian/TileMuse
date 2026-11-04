@@ -312,9 +312,10 @@ def test_generated_maps_pass(make_spec, spawns):
     ],
     ids=["full room", "tight doors", "packed", "spacing that can't hold"],
 )
-def test_generated_maps_never_break_a_hard_rule(make_spec, fields):
-    # Spec rules may not hold in a crowded room, but the hard rules always do, so a new map
-    # never starts out unplayable.
+def test_generated_maps_keep_the_hard_rules_when_the_room_has_space(make_spec, fields):
+    # Spec rules may not hold in a crowded room, but the hard rules do, so a new map starts out
+    # playable. A room too full to join every door can't keep them: about 70% of the room in
+    # blocking objects is too much for some layouts.
     spec = make_spec(**fields)
     for seed in range(40):
         blocking = [v for v in validate(generate(spec, Random(seed)), spec) if v.blocking]

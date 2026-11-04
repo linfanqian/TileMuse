@@ -72,7 +72,7 @@ export default function App() {
       setMap(result.map)
       setGeneration((n) => n + 1)
       // A new map has no earlier map to go back to, so any hard-rule problem is listed here.
-      // The generator keeps the hard rules, so there shouldn't be one.
+      // The generator keeps the hard rules unless the room is too full to join every door.
       setViolations(result.violations)
       setExplanations(result.explanations)
       setUndone(null)
