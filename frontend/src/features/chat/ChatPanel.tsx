@@ -3,10 +3,10 @@ import { useState, type FormEvent } from 'react'
 type Props = {
   onSubmit: (idea: string) => void
   // True while a map is being made, so the idea can't be sent twice.
-  busy?: boolean
+  busy: boolean
 }
 
-export default function ChatPanel({ onSubmit, busy = false }: Props) {
+export default function ChatPanel({ onSubmit, busy }: Props) {
   const [idea, setIdea] = useState('')
 
   function handleSubmit(e: FormEvent) {

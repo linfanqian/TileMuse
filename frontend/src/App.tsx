@@ -20,11 +20,10 @@ export default function App() {
   // Counts generated maps. A new map remounts the editor, so no hover or selection carries over.
   const [generation, setGeneration] = useState(0)
   const [explanations, setExplanations] = useState<Explanation[]>([])
-  // Where the error came from, so a good validation clears only its own error.
-  const [error, setError] = useState<{
-    text: string
-    from: 'validate' | 'other'
-  } | null>(null)
+  // Two kinds of error, so neither can hide or clear the other. A validation error belongs to
+  // the map on screen. An action error belongs to the last Generate or export.
+  const [validateError, setValidateError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   // True while a map is being made. Edits and a second Generate are ignored until it's done.
   const [busy, setBusy] = useState(false)
   // Each edit, and each new map once it arrives, takes the next number. Only the newest one's
@@ -34,7 +33,7 @@ export default function App() {
   async function handleIdea(idea: string) {
     if (busy) return
     setBusy(true)
-    setError(null)
+    setActionError(null)
     try {
       const nextSpec = await getSpec(idea)
       // Math.random only picks the seed; the backend generator is deterministic given it.
@@ -47,8 +46,9 @@ export default function App() {
       setMap(result.map)
       setGeneration((n) => n + 1)
       setExplanations(result.explanations)
+      setValidateError(null)
     } catch (e) {
-      setError({ text: String(e), from: 'other' })
+      setActionError(String(e))
     } finally {
       setBusy(false)
     }
@@ -62,15 +62,15 @@ export default function App() {
       const result = await validate(spec, next)
       if (request !== latest.current) return
       setExplanations(result.explanations)
-      setError((old) => (old?.from === 'validate' ? null : old))
+      setValidateError(null)
     } catch (e) {
-      if (request === latest.current)
-        setError({ text: String(e), from: 'validate' })
+      if (request === latest.current) setValidateError(String(e))
     }
   }
 
   async function handleExport() {
     if (!map) return
+    setActionError(null)
     try {
       const tiled = await exportTiled(map)
       const a = document.createElement('a')
@@ -78,7 +78,7 @@ export default function App() {
       a.download = 'map.tmj'
       a.click()
     } catch (e) {
-      setError({ text: String(e), from: 'other' })
+      setActionError(String(e))
     }
   }
 
@@ -86,7 +86,8 @@ export default function App() {
     <main>
       <h1>TileMuse</h1>
       <ChatPanel onSubmit={handleIdea} busy={busy} />
-      {error && <p role="alert">{error.text}</p>}
+      {actionError && <p role="alert">{actionError}</p>}
+      {validateError && <p role="alert">{validateError}</p>}
       {map && (
         <>
           <p>Seed: {seed}</p>
