@@ -94,8 +94,10 @@ test('an idea becomes a map with its issues', async () => {
   await generateMap()
   screen.getByText('No issues found.')
   expect(client.generate).toHaveBeenCalledWith(SPEC, expect.any(Number))
-  // The editor asks for the map drawn with the spec's kit.
-  expect(client.drawMap).toHaveBeenCalledWith(SPEC.kit, expect.anything())
+  // The editor asks for the map drawn with the spec's kit, once its effect has run.
+  await waitFor(() =>
+    expect(client.drawMap).toHaveBeenCalledWith(SPEC.kit, expect.anything()),
+  )
 })
 
 test('going back to the interview keeps the chat', async () => {
