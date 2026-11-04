@@ -35,6 +35,16 @@ beforeEach(() => {
   })
 })
 
+// Undoes the download stubs below after every test, even a failed one.
+const realUrl = {
+  createObjectURL: URL.createObjectURL,
+  revokeObjectURL: URL.revokeObjectURL,
+}
+afterEach(() => {
+  Object.assign(URL, realUrl)
+  vi.restoreAllMocks()
+})
+
 // A promise the test settles by hand, to control the order replies arrive in.
 function later<T>() {
   let resolve!: (value: T) => void
@@ -237,15 +247,6 @@ test('a failed validation does not replace a Generate error', async () => {
 })
 
 // Stubs the browser download, which jsdom can't do. Returns the clicked links.
-const realUrl = {
-  createObjectURL: URL.createObjectURL,
-  revokeObjectURL: URL.revokeObjectURL,
-}
-afterEach(() => {
-  Object.assign(URL, realUrl)
-  vi.restoreAllMocks()
-})
-
 function stubDownload() {
   URL.createObjectURL = vi.fn(() => 'blob:map')
   URL.revokeObjectURL = vi.fn()
