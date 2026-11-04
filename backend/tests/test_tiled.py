@@ -92,7 +92,7 @@ def test_every_kit_draws_each_cell_with_its_tiles(kit_name):
     assert all(walls[y][x] == 0 for y in range(2 + shift, H - 1 + shift) for x in (3, 4, 5))
 
     # Each object is a tile object on its cell. A tile object's y is its bottom edge.
-    group = next(layer for layer in out["layers"] if layer["type"] == "objectgroup")
+    group = next(layer for layer in out["layers"] if layer["name"] == "objects")
     for obj, kind in zip(group["objects"], ObjectKind, strict=True):
         assert (obj["type"], obj["gid"]) == (kind.value, gids(kit.objects[kind])[0])
         assert obj["y"] == (4 + shift + 1) * SIZE

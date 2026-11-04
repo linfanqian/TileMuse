@@ -124,8 +124,9 @@ def to_tiled(game_map: GameMap, kit: str) -> dict[str, Any]:
 
 def _blocking_tiles(catalog: Catalog) -> list[int]:
     """Sheet ids that block movement. Entries share tiles: an opening's end is also a wall's
-    corner. So a tile blocks if any entry that uses it blocks. No one-tile entry that can be
-    walked on shares a tile with one that blocks, so this never blocks a floor or door tile."""
+    corner. So a tile blocks if any entry that uses it blocks. No floor tile, door middle, or
+    closed door shares a tile with a blocking entry, so none of them blocks. The per-kit export
+    test checks this."""
     return sorted(
         {tile for entry in catalog.entries if entry.blocking for tile in entry.parts or [entry.id]}
     )
