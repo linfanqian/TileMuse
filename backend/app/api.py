@@ -1,21 +1,26 @@
 """HTTP routes. The only module that wires pipeline stages together."""
 
+import io
+import json
 import logging
+import zipfile
 from collections.abc import AsyncIterable
 from contextlib import aclosing
 from random import Random
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Literal, Self
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.explainer import explain
 from app.generator import generate
 from app.interview import MAX_MESSAGE, ChatMessage, InterviewResult, idea_to_spec, interview
+from app.kits import ASSETS
 from app.llm import LLMError, LLMUnavailable, TextDelta
 from app.models import Explanation, GameMap, Violation
 from app.spec import MapSpec, SpecDraft
 from app.tiled import to_tiled
+from app.tileset import load_tileset
 from app.validator import validate
 
 router = APIRouter()
@@ -94,6 +99,7 @@ class ValidateRequest(BaseModel):
 
 
 class ExportRequest(BaseModel):
+    spec: MapSpec  # Its kit picks the tiles.
     map: GameMap
 
 
@@ -160,6 +166,25 @@ def validate_map(req: ValidateRequest) -> ValidationResult:
     return check(req.map, req.spec)
 
 
-@router.post("/export")
-def export_map(req: ExportRequest) -> dict[str, Any]:
-    return to_tiled(req.map)
+EXPORT_NAME = "tilemuse-map"
+
+
+@router.post(
+    "/export",
+    response_class=Response,
+    responses={200: {"content": {"application/zip": {}}, "description": "The map and its sheet"}},
+)
+def export_map(req: ExportRequest) -> Response:
+    """A zip with the Tiled map and the tile sheet it points to, ready to open in Tiled."""
+    image = load_tileset().catalog.image
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(
+            f"{EXPORT_NAME}.tmj", json.dumps(to_tiled(req.map, req.spec.kit), indent=2)
+        )
+        archive.write(ASSETS / image, image)
+    return Response(
+        buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{EXPORT_NAME}.zip"'},
+    )
