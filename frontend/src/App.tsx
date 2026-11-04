@@ -13,6 +13,8 @@ import SpecView from './features/interview/SpecView'
 import Transcript, { type Turn } from './features/interview/Transcript'
 import MapEditor from './features/editor/MapEditor'
 import SideRail from './features/rail/SideRail'
+import SeedDialog from './features/seed/SeedDialog'
+import { randomSeed } from './features/seed/seed'
 import ViolationList from './features/violations/ViolationList'
 import './App.css'
 
@@ -33,6 +35,8 @@ export default function App() {
   const [spec, setSpec] = useState<MapSpec | null>(null)
   const [map, setMap] = useState<GameMap | null>(null)
   const [seed, setSeed] = useState<number | null>(null)
+  // True while the seed dialog is open, to regenerate the map with a chosen seed.
+  const [seedOpen, setSeedOpen] = useState(false)
   // The interview chat that led to the map, shown in the editor's Chat tab.
   const [chat, setChat] = useState<Turn[]>([])
   // The cell an issue's "Show on map" points at. Cleared when the map changes.
@@ -61,15 +65,18 @@ export default function App() {
   // Bumped by Start over, so a map still being made for the old session is dropped.
   const current = useRef(0)
 
-  // From the interview, with its chat. Regenerate passes no chat, so the old one stays.
-  async function handleGenerate(nextSpec: MapSpec, turns?: Turn[]) {
+  // From the interview, with its chat and a random seed. The seed dialog passes its seed and
+  // no chat, so the old chat stays.
+  async function handleGenerate(
+    nextSpec: MapSpec,
+    { turns, seed: chosen }: { turns?: Turn[]; seed?: number } = {},
+  ) {
     if (busy) return
     const mine = current.current
     setBusy(true)
     setActionError(null)
     try {
-      // Math.random only picks the seed; the backend generator is deterministic given it.
-      const nextSeed = Math.floor(Math.random() * 2 ** 31)
+      const nextSeed = chosen ?? randomSeed()
       const result = await generate(nextSpec, nextSeed)
       if (mine !== current.current) return
       // Only now is the old map replaced, so a failed Generate keeps its pending replies.
@@ -104,6 +111,7 @@ export default function App() {
     setSpec(null)
     setMap(null)
     setSeed(null)
+    setSeedOpen(false)
     setChat([])
     setShown(null)
     setViolations([])
@@ -193,15 +201,16 @@ export default function App() {
         {screen === 'editor' && map && spec && (
           <div className="map-actions">
             <span className="seed">
-              Seed <code>{seed}</code>
+              Seed{' '}
+              <button
+                className="seed-value"
+                title="Change the seed to regenerate the map"
+                onClick={() => setSeedOpen(true)}
+                disabled={busy}
+              >
+                {seed}
+              </button>
             </span>
-            <button
-              // A new seed gives a new layout for the same spec.
-              onClick={() => void handleGenerate(spec)}
-              disabled={busy}
-            >
-              {busy ? 'Regenerating…' : 'Regenerate'}
-            </button>
             <button
               className="primary"
               onClick={handleExport}
@@ -221,7 +230,7 @@ export default function App() {
       <div className="screen" hidden={screen !== 'interview'}>
         <Interview
           key={session}
-          onGenerate={handleGenerate}
+          onGenerate={(ready, turns) => void handleGenerate(ready, { turns })}
           generating={busy}
         />
       </div>
@@ -256,6 +265,16 @@ export default function App() {
             />
           </aside>
         </div>
+      )}
+      {seedOpen && spec && seed !== null && (
+        <SeedDialog
+          seed={seed}
+          onCancel={() => setSeedOpen(false)}
+          onRegenerate={(chosen) => {
+            setSeedOpen(false)
+            void handleGenerate(spec, { seed: chosen })
+          }}
+        />
       )}
     </main>
   )

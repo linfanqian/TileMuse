@@ -1,0 +1,68 @@
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(29 29 36 / 0.4);
+}
+
+.dialog {
+  width: min(420px, 100%);
+  padding: 20px 24px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.2);
+}
+
+.dialog h2 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+}
+
+.dialog > p {
+  margin: 0 0 14px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.seed-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.seed-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-family: ui-monospace, monospace;
+}
+
+.seed-field input[aria-invalid='true'] {
+  border-color: #b42318;
+}
+
+.seed-field button,
+.dialog-actions button:not(.primary) {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.dialog .error {
+  margin: 8px 0 0;
+  font-size: 0.875rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}

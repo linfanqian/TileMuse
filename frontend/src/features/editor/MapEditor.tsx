@@ -25,9 +25,12 @@ import {
   placeObject,
 } from './edit'
 import { sprites } from './sprites'
+import './MapEditor.css'
 
 // On-screen size of a cell: 16px tiles drawn at twice their size, so pixels stay sharp.
 const CELL = 32
+// On-screen size of a tile in the tool strip.
+const ICON = 24
 
 // Tile tools, and how each tile value is named. The colors draw the map until the kit's
 // tiles arrive, or if they can't be loaded.
@@ -157,7 +160,7 @@ export default function MapEditor({
     return `(${x}, ${y}) · ${TILE_NAMES[map.tiles[y][x]]}${obj}`
   }
 
-  const toolButton = (name: Tool, content: ReactNode, color?: string) => (
+  const toolButton = (name: Tool, content: ReactNode) => (
     <button
       key={name}
       type="button"
@@ -165,87 +168,99 @@ export default function MapEditor({
       title={plain(name)}
       aria-pressed={tool === name}
       onClick={() => chooseTool(name)}
-      style={{
-        width: 32,
-        height: 32,
-        background: color,
-        outline: tool === name ? '2px solid #2f7de1' : undefined,
-      }}
     >
       {content}
     </button>
   )
+  // The kit's tiles for a tool, once a drawing has said what they are.
+  const kitIcon = (name: string, fallback: ReactNode) => {
+    const tiles = drawn?.drawing.tools[name]
+    if (!drawn || !tiles) return fallback
+    return (
+      <ToolIcon tiles={tiles} drawing={drawn.drawing} fallback={fallback} />
+    )
+  }
 
   return (
-    <div>
-      <div
-        role="toolbar"
-        aria-label="Tools"
-        style={{ display: 'flex', gap: 4 }}
-      >
+    <div className="map-editor">
+      <div role="toolbar" aria-label="Tools" className="tool-strip">
         {toolButton('select', '↖')}
         {toolButton('erase', '⌫')}
+        <span className="tool-gap" aria-hidden />
         {(Object.keys(TILE_TOOLS) as TileTool[]).map((name) =>
-          toolButton(name, null, TILE_COLORS[TILE_TOOLS[name]]),
+          toolButton(
+            name,
+            kitIcon(
+              name,
+              <span
+                className="swatch"
+                style={{ background: TILE_COLORS[TILE_TOOLS[name]] }}
+              />,
+            ),
+          ),
         )}
+        <span className="tool-gap" aria-hidden />
         {KINDS.map((kind) =>
-          toolButton(kind, <Marker kind={kind} size={18} />),
+          toolButton(kind, kitIcon(kind, <Marker kind={kind} size={22} />)),
         )}
       </div>
-      <div
-        style={{
-          position: 'relative',
-          marginTop: 8,
-          // A two-row top wall adds rows above the map, so the cells sit `shift` rows down.
-          paddingTop: (art?.drawing.shift ?? 0) * CELL,
-        }}
-      >
-        {drawn && <TileCanvas drawn={drawn} onPainted={setArt} />}
+      <div className="map-area">
         <div
-          ref={grid}
-          role="grid"
-          onMouseLeave={() => setHover.current?.(null)}
+          className="map-frame"
           style={{
-            position: 'relative',
-            display: 'grid',
-            gridTemplateColumns: `repeat(${map.width}, ${CELL}px)`,
+            // A two-row top wall adds rows above the map, so the cells sit `shift` rows down.
+            paddingTop: (art?.drawing.shift ?? 0) * CELL,
           }}
         >
-          {map.tiles.flatMap((row, y) =>
-            row.map((tile, x) => {
-              const i = objectOn(x, y)
-              const isSelected = selected?.x === x && selected.y === y
-              const isShown = highlight?.x === x && highlight.y === y
-              const color = needsColor(x, y)
-              return (
-                <div
-                  key={`${x},${y}`}
-                  role="gridcell"
-                  aria-label={describe({ x, y })}
-                  aria-selected={isSelected}
-                  onClick={() => click(x, y)}
-                  onMouseEnter={() => setHover.current?.({ x, y })}
-                  style={{
-                    width: CELL,
-                    height: CELL,
-                    display: 'grid',
-                    placeItems: 'center',
-                    background: color ? TILE_COLORS[tile] : undefined,
-                    outline: isSelected ? '2px solid #2f7de1' : undefined,
-                    outlineOffset: -2,
-                    // Inside the cell, so it shows next to a selection outline.
-                    boxShadow: isShown ? 'inset 0 0 0 3px #d64545' : undefined,
-                  }}
-                >
-                  {i !== -1 &&
-                    // The kit has a tile for every kind the editor knows.
-                    (color || !(map.objects[i].kind in MARKERS)) && (
-                      <Marker kind={map.objects[i].kind} size={CELL - 6} />
-                    )}
-                </div>
-              )
-            }),
-          )}
+          {drawn && <TileCanvas drawn={drawn} onPainted={setArt} />}
+          <div
+            ref={grid}
+            role="grid"
+            onMouseLeave={() => setHover.current?.(null)}
+            style={{
+              position: 'relative',
+              display: 'grid',
+              gridTemplateColumns: `repeat(${map.width}, ${CELL}px)`,
+            }}
+          >
+            {map.tiles.flatMap((row, y) =>
+              row.map((tile, x) => {
+                const i = objectOn(x, y)
+                const isSelected = selected?.x === x && selected.y === y
+                const isShown = highlight?.x === x && highlight.y === y
+                const color = needsColor(x, y)
+                return (
+                  <div
+                    key={`${x},${y}`}
+                    role="gridcell"
+                    aria-label={describe({ x, y })}
+                    aria-selected={isSelected}
+                    onClick={() => click(x, y)}
+                    onMouseEnter={() => setHover.current?.({ x, y })}
+                    style={{
+                      width: CELL,
+                      height: CELL,
+                      display: 'grid',
+                      placeItems: 'center',
+                      background: color ? TILE_COLORS[tile] : undefined,
+                      outline: isSelected ? '2px solid #2f7de1' : undefined,
+                      outlineOffset: -2,
+                      // Inside the cell, so it shows next to a selection outline.
+                      boxShadow: isShown
+                        ? 'inset 0 0 0 3px #d64545'
+                        : undefined,
+                    }}
+                  >
+                    {i !== -1 &&
+                      // The kit has a tile for every kind the editor knows.
+                      (color || !(map.objects[i].kind in MARKERS)) && (
+                        <Marker kind={map.objects[i].kind} size={CELL - 6} />
+                      )}
+                  </div>
+                )
+              }),
+            )}
+          </div>
         </div>
       </div>
       <StatusLine
@@ -335,6 +350,69 @@ function TileCanvas({
   )
 }
 
+// A tool's look in the kit: its tiles side by side, at the sheet's size scaled up. Shows
+// `fallback` until they are drawn, or if they can't be.
+function ToolIcon({
+  tiles,
+  drawing,
+  fallback,
+}: {
+  tiles: number[]
+  drawing: Drawing
+  fallback: ReactNode
+}) {
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const [painted, setPainted] = useState(false)
+  const size = drawing.tile_size
+  const { columns } = drawing
+  useEffect(() => {
+    let current = true
+    loadSheet().then(
+      (image) => {
+        const context = canvas.current?.getContext('2d')
+        if (!current || !context) return
+        context.imageSmoothingEnabled = false
+        context.clearRect(0, 0, tiles.length * size, size)
+        tiles.forEach((tile, i) =>
+          context.drawImage(
+            image,
+            (tile % columns) * size,
+            Math.floor(tile / columns) * size,
+            size,
+            size,
+            i * size,
+            0,
+            size,
+            size,
+          ),
+        )
+        setPainted(true)
+      },
+      () => {},
+    )
+    return () => {
+      current = false
+    }
+  }, [tiles, size, columns])
+  return (
+    <>
+      <canvas
+        ref={canvas}
+        aria-hidden
+        width={tiles.length * size}
+        height={size}
+        style={{
+          display: painted ? 'block' : 'none',
+          width: tiles.length * ICON,
+          height: ICON,
+          imageRendering: 'pixelated',
+        }}
+      />
+      {!painted && fallback}
+    </>
+  )
+}
+
 // The hovered cell's position and contents, and the map size.
 function StatusLine({
   setHoverRef,
@@ -348,7 +426,7 @@ function StatusLine({
   const [hover, setHover] = useState<Cell | null>(null)
   useImperativeHandle(setHoverRef, () => setHover, [])
   return (
-    <p role="status" style={{ display: 'flex', gap: 16 }}>
+    <p role="status" className="status-strip">
       <span>{hover ? describe(hover) : 'Hover a cell'}</span>
       <span>{size}</span>
     </p>

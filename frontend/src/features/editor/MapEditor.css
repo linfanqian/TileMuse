@@ -1,0 +1,73 @@
+/* The editor fills its column: tools along the top, the map in the middle, status below. */
+.map-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.tool-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.tool-strip button {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.tool-strip button[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px #c9cdff;
+}
+
+.tool-gap {
+  width: 1px;
+  height: 24px;
+  margin: 0 6px;
+  background: var(--border);
+}
+
+.swatch {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+/* The map sits in the middle. Auto margins keep it centered, and scrollable when bigger. */
+.map-area {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  padding: 24px;
+  background: var(--surface-muted);
+}
+
+.map-frame {
+  position: relative;
+  margin: auto;
+}
+
+.status-strip {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}

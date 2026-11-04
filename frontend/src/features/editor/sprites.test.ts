@@ -15,6 +15,7 @@ test('finds each tile on the sheet and places it in floor, walls, objects order'
       { kind: 'key', x: 0, y: 0, tile: 249 },
       { kind: 'statue', x: 1, y: 0, tile: null },
     ],
+    tools: {},
   }
   expect(sprites(drawing)).toEqual([
     { sx: 0, sy: 64, dx: 0, dy: 0 }, // 48 = row 4, column 0

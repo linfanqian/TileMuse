@@ -510,34 +510,64 @@ test('the editor shows the chat and the spec in its side rail', async () => {
   expect(within(rail).queryByRole('textbox')).toBeNull()
 })
 
-test('the seed, Regenerate, and Export show only on the editor', async () => {
+test('the seed and Export show only on the editor', async () => {
   render(<App />)
-  expect(screen.queryByRole('button', { name: 'Regenerate' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Export for Tiled' })).toBeNull()
   cleanup()
   await generateMap()
-  screen.getByRole('button', { name: 'Regenerate' })
+  screen.getByRole('button', { name: 'Export for Tiled' })
   fireEvent.click(screen.getByRole('button', { name: '1 · Interview' }))
   expect(screen.queryByRole('button', { name: 'Export for Tiled' })).toBeNull()
 })
 
-test('Regenerate makes a new map from the same spec with a new seed', async () => {
-  const random = vi.spyOn(Math, 'random').mockReturnValue(0.5)
+// Opens the seed dialog by clicking the seed in the top bar.
+function openSeed(seed: number) {
+  fireEvent.click(screen.getByRole('button', { name: String(seed) }))
+  return screen.getByRole('dialog', { name: 'Regenerate the map' })
+}
+
+test('the seed dialog regenerates the map from the same spec with the chosen seed', async () => {
+  vi.spyOn(Math, 'random').mockReturnValue(0.5)
   await generateMap()
+  const dialog = openSeed(2 ** 30)
+  const input = within(dialog).getByLabelText('Seed')
+  expect(input).toHaveProperty('value', String(2 ** 30))
+
   const next = later<client.GenerateResult>()
   vi.mocked(client.generate).mockReturnValueOnce(next.promise)
-  random.mockReturnValue(0.25)
-  fireEvent.click(screen.getByRole('button', { name: 'Regenerate' }))
-  expect(client.generate).toHaveBeenLastCalledWith(SPEC, 2 ** 29)
-  const button = screen.getByRole('button', { name: 'Regenerating…' })
-  expect(button).toHaveProperty('disabled', true)
+  fireEvent.change(input, { target: { value: '42' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Regenerate' }))
+  expect(client.generate).toHaveBeenLastCalledWith(SPEC, 42)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  // The seed can't be changed again until the new map arrives.
+  expect(screen.getByRole('button', { name: String(2 ** 30) })).toHaveProperty(
+    'disabled',
+    true,
+  )
   await act(async () =>
     next.resolve(await vi.mocked(client.generate).mock.results[0].value),
   )
-  screen.getByText(String(2 ** 29))
+  screen.getByRole('button', { name: '42' })
   // The chat that led to the spec is still there.
   within(screen.getByRole('complementary', { name: 'Map details' })).getByText(
     'room',
   )
+})
+
+test('Random picks a new seed, and Cancel leaves the map as it is', async () => {
+  const random = vi.spyOn(Math, 'random').mockReturnValue(0.5)
+  await generateMap()
+  const dialog = openSeed(2 ** 30)
+  random.mockReturnValue(0.25)
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Random' }))
+  expect(within(dialog).getByLabelText('Seed')).toHaveProperty(
+    'value',
+    String(2 ** 29),
+  )
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(client.generate).toHaveBeenCalledTimes(1)
+  screen.getByRole('button', { name: String(2 ** 30) })
 })
 
 test('Show on map outlines the issue cell until the map changes', async () => {

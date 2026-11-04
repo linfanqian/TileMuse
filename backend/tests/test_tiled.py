@@ -1,5 +1,6 @@
 import pytest
 
+from app.drawing import draw, tool_tiles
 from app.kits import ASSETS
 from app.models import GameMap, MapObject, Tile
 from app.spec import ObjectKind
@@ -188,3 +189,20 @@ def test_odd_edited_maps_still_export(kit_name, tiles):
     game_map = GameMap(width=len(tiles[0]), height=len(tiles), tiles=tiles)
     out = to_tiled(game_map, kit_name)
     assert len(layer(out, "walls")) == out["height"]
+
+
+@pytest.mark.parametrize("kit_name", list(TILESET.kits))
+def test_each_tool_shows_the_tiles_it_paints(kit_name):
+    tools = tool_tiles(kit_name)
+    drawing = draw(room(), kit_name)
+    shift = drawing.shift
+    assert tools["floor"] == [drawing.floor[H - 2 + shift][3]]
+    assert tools["wall"] == [drawing.walls[2 + shift][2]]  # The wall painted inside at (2, 2).
+    # The top door's whole opening, as drawn on its row. A floor part shows the floor there.
+    x, y = DOORS["top"]
+    door = drawing.walls[y + shift][x - len(tools["door"]) // 2 :][: len(tools["door"])]
+    floor_id = drawing.floor[H - 2 + shift][3]
+    assert door == [None if tile == floor_id else tile for tile in tools["door"]]
+    for obj in drawing.objects:
+        assert tools[obj.kind] == [obj.tile]
+    assert set(tools) == {"floor", "wall", "door", *(kind.value for kind in ObjectKind)}
