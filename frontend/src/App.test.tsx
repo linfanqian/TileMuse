@@ -19,6 +19,8 @@ const SPEC: client.MapSpec = {
 
 beforeEach(() => {
   vi.resetAllMocks()
+  // The editor falls back to colored cells, which these tests read.
+  vi.mocked(client.drawMap).mockRejectedValue(new Error('no drawing in tests'))
   // One turn settles every field, so Generate map unlocks after the first idea.
   vi.mocked(client.interview).mockResolvedValue({
     type: 'done',
@@ -92,6 +94,8 @@ test('an idea becomes a map with its issues', async () => {
   await generateMap()
   screen.getByText('No issues found.')
   expect(client.generate).toHaveBeenCalledWith(SPEC, expect.any(Number))
+  // The editor asks for the map drawn with the spec's kit.
+  expect(client.drawMap).toHaveBeenCalledWith(SPEC.kit, expect.anything())
 })
 
 test('going back to the interview keeps the chat', async () => {

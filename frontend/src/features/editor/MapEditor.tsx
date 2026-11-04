@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -6,7 +7,15 @@ import {
   type ReactNode,
   type Ref,
 } from 'react'
-import type { GameMap, ObjectKind, Tile } from '../../api/client'
+import {
+  drawMap,
+  TILESHEET_URL,
+  type Drawing,
+  type GameMap,
+  type Kit,
+  type ObjectKind,
+  type Tile,
+} from '../../api/client'
 import {
   cellKey,
   eraseObject,
@@ -15,10 +24,13 @@ import {
   paintTile,
   placeObject,
 } from './edit'
+import { sprites } from './sprites'
 
-const CELL = 24
+// On-screen size of a cell: 16px tiles drawn at twice their size, so pixels stay sharp.
+const CELL = 32
 
-// Tile tools, and how each tile value is named and drawn.
+// Tile tools, and how each tile value is named. The colors draw the map until the kit's
+// tiles arrive, or if they can't be loaded.
 const TILE_TOOLS = { floor: 0, wall: 1, door: 2 } as const
 type TileTool = keyof typeof TILE_TOOLS
 const TILE_NAMES: Record<Tile, TileTool> = { 0: 'floor', 1: 'wall', 2: 'door' }
@@ -50,12 +62,26 @@ const plain = (name: string) => name.replaceAll('_', ' ')
 
 type Props = {
   map: GameMap
+  kit: Kit
   onChange: (map: GameMap) => void
 }
 
-export default function MapEditor({ map, onChange }: Props) {
+export default function MapEditor({ map, kit, onChange }: Props) {
   const [tool, setTool] = useState<Tool>('select')
   const [selected, setSelected] = useState<Cell | null>(null)
+  // The kit's tiles for the map, from the backend. Until the drawing for an edit arrives, the
+  // last one stays on screen. Null means draw colored cells instead.
+  const [drawing, setDrawing] = useState<Drawing | null>(null)
+  useEffect(() => {
+    let current = true
+    drawMap(kit, map).then(
+      (next) => current && setDrawing(next),
+      () => current && setDrawing(null),
+    )
+    return () => {
+      current = false
+    }
+  }, [kit, map])
   // The status line owns the hovered cell, so hovering redraws only that line, not the grid.
   const setHover = useRef<SetHover>(null)
 
@@ -135,43 +161,54 @@ export default function MapEditor({ map, onChange }: Props) {
         )}
       </div>
       <div
-        role="grid"
-        onMouseLeave={() => setHover.current?.(null)}
         style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${map.width}, ${CELL}px)`,
+          position: 'relative',
           marginTop: 8,
+          // A two-row top wall adds rows above the map, so the cells sit `shift` rows down.
+          paddingTop: (drawing?.shift ?? 0) * CELL,
         }}
       >
-        {map.tiles.flatMap((row, y) =>
-          row.map((tile, x) => {
-            const i = objectOn(x, y)
-            const isSelected = selected?.x === x && selected.y === y
-            return (
-              <div
-                key={`${x},${y}`}
-                role="gridcell"
-                aria-label={describe({ x, y })}
-                aria-selected={isSelected}
-                onClick={() => click(x, y)}
-                onMouseEnter={() => setHover.current?.({ x, y })}
-                style={{
-                  width: CELL,
-                  height: CELL,
-                  display: 'grid',
-                  placeItems: 'center',
-                  background: TILE_COLORS[tile],
-                  outline: isSelected ? '2px solid #2f7de1' : undefined,
-                  outlineOffset: -2,
-                }}
-              >
-                {i !== -1 && (
-                  <Marker kind={map.objects[i].kind} size={CELL - 6} />
-                )}
-              </div>
-            )
-          }),
-        )}
+        {drawing && <TileCanvas drawing={drawing} />}
+        <div
+          role="grid"
+          onMouseLeave={() => setHover.current?.(null)}
+          style={{
+            position: 'relative',
+            display: 'grid',
+            gridTemplateColumns: `repeat(${map.width}, ${CELL}px)`,
+          }}
+        >
+          {map.tiles.flatMap((row, y) =>
+            row.map((tile, x) => {
+              const i = objectOn(x, y)
+              const isSelected = selected?.x === x && selected.y === y
+              return (
+                <div
+                  key={`${x},${y}`}
+                  role="gridcell"
+                  aria-label={describe({ x, y })}
+                  aria-selected={isSelected}
+                  onClick={() => click(x, y)}
+                  onMouseEnter={() => setHover.current?.({ x, y })}
+                  style={{
+                    width: CELL,
+                    height: CELL,
+                    display: 'grid',
+                    placeItems: 'center',
+                    background: drawing ? undefined : TILE_COLORS[tile],
+                    outline: isSelected ? '2px solid #2f7de1' : undefined,
+                    outlineOffset: -2,
+                  }}
+                >
+                  {i !== -1 &&
+                    !(drawing && hasTile(drawing, map.objects[i].kind)) && (
+                      <Marker kind={map.objects[i].kind} size={CELL - 6} />
+                    )}
+                </div>
+              )
+            }),
+          )}
+        </div>
       </div>
       <StatusLine
         setHoverRef={setHover}
@@ -179,6 +216,65 @@ export default function MapEditor({ map, onChange }: Props) {
         size={`${map.width} × ${map.height}`}
       />
     </div>
+  )
+}
+
+// True if the drawing shows this kind with a kit tile, so no marker is needed.
+function hasTile(drawing: Drawing, kind: string): boolean {
+  return drawing.objects.some((o) => o.kind === kind && o.tile !== null)
+}
+
+// Loads the sheet once and shares it between redraws.
+let sheet: Promise<HTMLImageElement> | null = null
+function loadSheet(): Promise<HTMLImageElement> {
+  sheet ??= new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => {
+      sheet = null // Try again on the next redraw.
+      reject(new Error('The tile sheet did not load.'))
+    }
+    image.src = TILESHEET_URL
+  })
+  return sheet
+}
+
+// The kit's tiles, drawn at the sheet's own size and scaled up without smoothing.
+function TileCanvas({ drawing }: { drawing: Drawing }) {
+  const canvas = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    let current = true
+    loadSheet().then(
+      (image) => {
+        const context = canvas.current?.getContext('2d')
+        if (!current || !context) return
+        const size = drawing.tile_size
+        context.imageSmoothingEnabled = false
+        context.clearRect(0, 0, drawing.width * size, drawing.height * size)
+        for (const { sx, sy, dx, dy } of sprites(drawing))
+          context.drawImage(image, sx, sy, size, size, dx, dy, size, size)
+      },
+      () => {},
+    )
+    return () => {
+      current = false
+    }
+  }, [drawing])
+  return (
+    <canvas
+      ref={canvas}
+      aria-hidden
+      width={drawing.width * drawing.tile_size}
+      height={drawing.height * drawing.tile_size}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: drawing.width * CELL,
+        height: drawing.height * CELL,
+        imageRendering: 'pixelated',
+      }}
+    />
   )
 }
 

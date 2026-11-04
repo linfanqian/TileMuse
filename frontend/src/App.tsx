@@ -143,10 +143,15 @@ export default function App() {
           generating={busy}
         />
       </div>
-      {map && (
+      {map && spec && (
         <div className="screen editor-screen" hidden={screen !== 'editor'}>
           <p>Seed: {seed}</p>
-          <MapEditor key={generation} map={map} onChange={handleEdit} />
+          <MapEditor
+            key={generation}
+            map={map}
+            kit={spec.kit}
+            onChange={handleEdit}
+          />
           <button onClick={handleExport}>Export for Tiled</button>
           <ViolationList explanations={explanations} />
         </div>
