@@ -252,8 +252,9 @@ function loadSheet(): Promise<HTMLImageElement> {
 }
 
 // The kit's tiles, drawn at the sheet's own size and scaled up without smoothing. Tells the
-// editor which drawing it painted, or null if it couldn't, so the editor colors exactly the
-// cells the canvas doesn't show yet.
+// editor which drawing it painted, or null if it couldn't, so the editor can color the cells
+// that changed since then. Pieces drawn beside a changed cell, like a door's ends, still show
+// the old tiles until the next paint.
 function TileCanvas({
   drawn,
   onPainted,
