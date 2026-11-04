@@ -1,4 +1,5 @@
-"""Map + kit -> the sheet tiles that draw it. Shared, so the exporter and the editor draw alike.
+"""Map + kit -> the sheet tiles that draw it. A shared module: the exporter uses it now, and
+drawing real tiles in the editor (#37) can reuse it.
 
 The drawing has three layers: floor, walls (doors included), and objects. A kit whose top wall
 is two tiles tall draws one extra row at the top. So the drawing is one row taller than the map,
