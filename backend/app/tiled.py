@@ -1,8 +1,8 @@
 """Map -> Tiled JSON export (https://doc.mapeditor.org/en/stable/reference/json-map-format/).
 
-The map is drawn with its kit's tiles (see drawing.py), on three layers: floor, walls, and
-objects. A fourth layer, doors, marks each door that leads out with a `door` object on its
-cell, so a game can find the exits. Tiles that block movement, by the catalog, carry a
+The export has four layers. Floor, walls, and objects draw the map with its kit's tiles (see
+drawing.py). Doors marks each door that leads out with a `door` object on its cell, so a game
+can find the exits. Tiles that block movement, by the catalog, carry a
 `blocking` property, so a game can set up collision. The tileset points to `tilesheet.png`,
 which must sit next to the exported file.
 
@@ -124,9 +124,10 @@ def to_tiled(game_map: GameMap, kit: str) -> dict[str, Any]:
 
 def _blocking_tiles(catalog: Catalog) -> list[int]:
     """Sheet ids that block movement. Entries share tiles: an opening's end is also a wall's
-    corner. So a tile blocks if any entry that uses it blocks. No floor tile, door middle, or
-    closed door shares a tile with a blocking entry, so none of them blocks. The per-kit export
-    test checks this."""
+    corner. So a tile blocks if any entry that uses it blocks. The export test checks, for each
+    kit, that the floor, door middles, and closed doors it draws don't block, and that every
+    wall it draws does. Some opening ends block only through wall entries no kit uses yet, so
+    changing those entries can change the export; that test catches it."""
     return sorted(
         {tile for entry in catalog.entries if entry.blocking for tile in entry.parts or [entry.id]}
     )
