@@ -7,7 +7,8 @@ cell, so a game can find the exits. Tiles that block movement, by the catalog, c
 which must sit next to the exported file.
 
 Checked with Tiled 1.12.2 for every kit: `tmxrasterizer` draws the export as expected, and
-`tiled --export-map json` re-saves it with the same layers, tiles, and object types.
+`tiled --export-map json` re-saves it with the same layers, tiles, and object types, and keeps
+the door objects and the `blocking` properties.
 """
 
 from typing import Any
