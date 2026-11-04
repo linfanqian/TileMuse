@@ -1,5 +1,5 @@
 import type { MapSpec, Question, SpecDraft } from '../../api/client'
-import { specRows, summary } from './fields'
+import { allSet, specRows, summary } from './fields'
 
 type Props = {
   draft: SpecDraft
@@ -21,12 +21,11 @@ export default function SpecPanel({
   const rows = specRows(draft, question)
   const ready = rows.filter((r) => r.status === 'ready').length
   const text = summary(draft)
-  const allSet = rows.every((r) => r.value !== '—')
 
   let hint = 'Available once every field is ready'
   if (spec && question) hint = 'Ready now, or keep answering to refine it'
   else if (spec) hint = 'The spec is ready'
-  else if (allSet) hint = "Some fields don't fit together yet"
+  else if (allSet(draft)) hint = "Some fields don't fit together yet"
 
   return (
     <aside className="spec-panel" aria-label="Design spec">

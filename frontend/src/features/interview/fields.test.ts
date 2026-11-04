@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
-import type { ChatMessage } from '../../api/client'
-import { MAX_MESSAGES, specRows, summary, trimHistory } from './fields'
+import type { ChatMessage, SpecDraft } from '../../api/client'
+import { MAX_MESSAGES, allSet, specRows, summary, trimHistory } from './fields'
 
 test('rows show set fields as ready and the asked field as asking', () => {
   const rows = specRows(
@@ -70,4 +70,20 @@ test('trimming keeps the first idea and drops the oldest question and answer', (
   expect(kept.slice(0, 2).map((m) => m.content)).toEqual(['m0', 'm3'])
   expect(kept.at(-1)!.content).toBe(`m${MAX_MESSAGES + 1}`)
   expect(trimHistory(messages.slice(0, 3))).toEqual(messages.slice(0, 3))
+})
+
+test('a half-set size does not count as every field set', () => {
+  const spec: SpecDraft = {
+    theme: 'library',
+    mood: 'creepy',
+    kit: 'dungeon',
+    width: 20,
+    height: 14,
+    doors: 1,
+    objects: [],
+    rules: [],
+  }
+  expect(allSet(spec)).toBe(true)
+  expect(allSet({ ...spec, height: null })).toBe(false)
+  expect(allSet({ ...spec, rules: undefined })).toBe(false)
 })

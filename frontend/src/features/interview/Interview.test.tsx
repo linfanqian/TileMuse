@@ -175,3 +175,16 @@ test('unmounting stops the turn in flight', () => {
   unmount()
   expect(signal.aborted).toBe(true)
 })
+
+test('the hint tells an unfinished spec from one that does not fit', async () => {
+  const draft = { ...SPEC, height: null }
+  vi.mocked(client.interview)
+    .mockResolvedValueOnce({ ...asking, draft })
+    .mockResolvedValueOnce({ ...asking, draft: SPEC })
+  const { say } = setup()
+  say('A creepy library')
+  await screen.findByText('How big should the room be?')
+  screen.getByText('Available once every field is ready')
+  say('Make it 20 by 14')
+  await screen.findByText("Some fields don't fit together yet")
+})

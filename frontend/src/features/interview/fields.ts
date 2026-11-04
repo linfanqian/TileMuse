@@ -56,6 +56,10 @@ function describe(draft: SpecDraft, field: Field): string | null {
 
 const isSet = (draft: SpecDraft, field: Field) => draft[field] != null
 
+/** True once every spec field is set, whether or not they fit together. */
+export const allSet = (draft: SpecDraft) =>
+  ROWS.every(({ fields }) => fields.every((f) => isSet(draft, f)))
+
 /** The spec panel's rows. The field Claude is asking about is `asking`, even if already set. */
 export function specRows(draft: SpecDraft, question: Question | null): Row[] {
   return ROWS.map(({ label, fields }) => {
