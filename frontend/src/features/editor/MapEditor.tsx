@@ -238,14 +238,25 @@ export default function MapEditor({ map, kit, onChange }: Props) {
   )
 }
 
-// One load of the sheet, shared by every redraw, even while it is still loading. A failed
-// load is dropped, so the next redraw tries again.
+// A load that takes longer than this counts as failed, so a stalled request is tried again.
+const SHEET_TIMEOUT_MS = 10_000
+
+// One load of the sheet, shared by every redraw, even while it is still loading. A load that
+// fails or times out is dropped, so the next redraw tries again.
 let sheet: Promise<HTMLImageElement> | null = null
 function loadSheet(): Promise<HTMLImageElement> {
   sheet ??= new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image()
-    image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error('The tile sheet did not load.'))
+    const fail = () => reject(new Error('The tile sheet did not load.'))
+    const timer = setTimeout(fail, SHEET_TIMEOUT_MS)
+    image.onload = () => {
+      clearTimeout(timer)
+      resolve(image)
+    }
+    image.onerror = () => {
+      clearTimeout(timer)
+      fail()
+    }
     image.src = TILESHEET_URL
   }).catch((error: unknown) => {
     sheet = null

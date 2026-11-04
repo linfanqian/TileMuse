@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import * as client from '../../api/client'
@@ -152,6 +152,7 @@ function stubCanvas(
 }
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
@@ -282,8 +283,9 @@ test('if the canvas cannot paint, cells keep their colors and markers', async ()
   expect(cell(1, 1).style.background).not.toBe('')
 })
 
-test('redraws share one sheet load, and a failed load is tried again', async () => {
-  // The loaded sheet is kept for the whole page, so this test needs a fresh editor module.
+// The loaded sheet is kept for the whole page, so the sheet tests load a fresh editor module.
+// Its sheet loads never finish unless the test says so; `loads` holds each one started.
+async function freshEditor() {
   vi.resetModules()
   const fresh = await import('../../api/client')
   const { default: Editor } = await import('./MapEditor')
@@ -293,7 +295,7 @@ test('redraws share one sheet load, and a failed load is tried again', async () 
     class {
       onerror: (() => void) | null = null
       set src(_: string) {
-        loads.push(this) // Never loads until the test says so.
+        loads.push(this)
       }
     },
   )
@@ -305,6 +307,11 @@ test('redraws share one sheet load, and a failed load is tried again', async () 
     <Editor map={map} kit="dungeon" onChange={() => {}} />
   )
   const { rerender } = render(show(start))
+  return { fresh, loads, show, rerender }
+}
+
+test('redraws share one sheet load, and a failed load is tried again', async () => {
+  const { fresh, loads, show, rerender } = await freshEditor()
   await waitFor(() => expect(loads).toHaveLength(1))
 
   rerender(show({ ...start, objects: [] }))
@@ -315,4 +322,23 @@ test('redraws share one sheet load, and a failed load is tried again', async () 
   loads[0].onerror!()
   rerender(show(start))
   await waitFor(() => expect(loads).toHaveLength(2))
+})
+
+test('a stalled sheet load is dropped after a while, so a later redraw tries again', async () => {
+  vi.useFakeTimers()
+  // Lets the draw replies arrive and the canvas start its load.
+  const settle = () => act(() => vi.advanceTimersByTimeAsync(0))
+  const { loads, show, rerender } = await freshEditor()
+  await settle()
+  expect(loads).toHaveLength(1)
+
+  await act(() => vi.advanceTimersByTimeAsync(9_000))
+  rerender(show({ ...start, objects: [] }))
+  await settle()
+  expect(loads).toHaveLength(1) // Still waiting on the first load.
+
+  await act(() => vi.advanceTimersByTimeAsync(1_000))
+  rerender(show(start))
+  await settle()
+  expect(loads).toHaveLength(2)
 })
