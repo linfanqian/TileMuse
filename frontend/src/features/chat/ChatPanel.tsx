@@ -11,7 +11,7 @@ export default function ChatPanel({ onSubmit, busy = false }: Props) {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!busy && idea.trim()) onSubmit(idea.trim())
+    if (idea.trim()) onSubmit(idea.trim())
   }
 
   return (

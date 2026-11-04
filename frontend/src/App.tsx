@@ -20,16 +20,19 @@ export default function App() {
   // Counts generated maps. A new map remounts the editor, so no hover or selection carries over.
   const [generation, setGeneration] = useState(0)
   const [explanations, setExplanations] = useState<Explanation[]>([])
-  const [error, setError] = useState<string | null>(null)
-  // True while a map is being made. Edits and a second Generate wait until it's done.
+  // Where the error came from, so a good validation clears only its own error.
+  const [error, setError] = useState<{
+    text: string
+    from: 'validate' | 'other'
+  } | null>(null)
+  // True while a map is being made. Edits and a second Generate are ignored until it's done.
   const [busy, setBusy] = useState(false)
-  // Each generate or edit takes the next number. Only the newest one's reply is shown, so a
-  // slow reply for an older map can't replace the issues for the current one.
+  // Each edit, and each new map once it arrives, takes the next number. Only the newest one's
+  // reply is shown, so a slow reply for an older map can't replace the current issues.
   const latest = useRef(0)
 
   async function handleIdea(idea: string) {
     if (busy) return
-    latest.current += 1
     setBusy(true)
     setError(null)
     try {
@@ -37,13 +40,15 @@ export default function App() {
       // Math.random only picks the seed; the backend generator is deterministic given it.
       const nextSeed = Math.floor(Math.random() * 2 ** 31)
       const result = await generate(nextSpec, nextSeed)
+      // Only now is the old map replaced, so a failed Generate keeps its pending replies.
+      latest.current += 1
       setSpec(nextSpec)
       setSeed(nextSeed)
       setMap(result.map)
       setGeneration((n) => n + 1)
       setExplanations(result.explanations)
     } catch (e) {
-      setError(String(e))
+      setError({ text: String(e), from: 'other' })
     } finally {
       setBusy(false)
     }
@@ -57,9 +62,10 @@ export default function App() {
       const result = await validate(spec, next)
       if (request !== latest.current) return
       setExplanations(result.explanations)
-      setError(null)
+      setError((old) => (old?.from === 'validate' ? null : old))
     } catch (e) {
-      if (request === latest.current) setError(String(e))
+      if (request === latest.current)
+        setError({ text: String(e), from: 'validate' })
     }
   }
 
@@ -72,7 +78,7 @@ export default function App() {
       a.download = 'map.tmj'
       a.click()
     } catch (e) {
-      setError(String(e))
+      setError({ text: String(e), from: 'other' })
     }
   }
 
@@ -80,7 +86,7 @@ export default function App() {
     <main>
       <h1>TileMuse</h1>
       <ChatPanel onSubmit={handleIdea} busy={busy} />
-      {error && <p role="alert">{error}</p>}
+      {error && <p role="alert">{error.text}</p>}
       {map && (
         <>
           <p>Seed: {seed}</p>

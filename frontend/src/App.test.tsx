@@ -133,7 +133,7 @@ test('a reply for the old map does not land on a new map', async () => {
   expect(screen.queryByText('Old map.')).toBeNull()
 })
 
-test('while a map is being made, Generate and edits wait', async () => {
+test('while a map is being made, Generate is disabled and edits are ignored', async () => {
   const cells = await generateMap()
   const spec = later<client.MapSpec>()
   vi.mocked(client.getSpec).mockReturnValueOnce(spec.promise)
@@ -173,4 +173,29 @@ test('the seed is kept and shown', async () => {
   random.mockRestore()
   screen.getByText('Seed: 1073741824')
   expect(client.generate).toHaveBeenCalledWith(expect.anything(), 1073741824)
+})
+
+test('a failed Generate keeps the reply for the edit before it', async () => {
+  const pending = later<ValidationResult>()
+  vi.mocked(client.validate).mockReturnValueOnce(pending.promise)
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  vi.mocked(client.getSpec).mockRejectedValueOnce(new Error('LLM down'))
+  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  await screen.findByRole('alert')
+  await act(async () => pending.resolve(issues('After the edit.')))
+  screen.getByText('After the edit.')
+})
+
+test('a good validation does not clear a Generate error', async () => {
+  vi.mocked(client.validate).mockResolvedValue(issues('Fine.'))
+  const cells = await generateMap()
+  vi.mocked(client.getSpec).mockRejectedValueOnce(new Error('LLM down'))
+  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  await screen.findByRole('alert')
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  await screen.findByText('Fine.')
+  expect(screen.getByRole('alert').textContent).toContain('LLM down')
 })
