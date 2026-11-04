@@ -134,7 +134,7 @@ export default function App() {
       // later checks would take as new, and undo every edit after it.
       if (request !== latest.current) return
       setMap(before)
-      setValidateError(String(e))
+      setValidateError(`Edit undone, since it couldn't be checked. ${e}`)
     } finally {
       // A new map has already cleared it, and an edit on that map may be checking now.
       if (request === latest.current) setChecking(false)

@@ -274,7 +274,8 @@ test('a click before an undo is drawn does not build on the undone edit', async 
   fireEvent.click(screen.getByRole('button', { name: 'wall' }))
   fireEvent.click(cells[5])
   // The check comes back outside act, so React hasn't drawn the undo yet when the user
-  // clicks again. That click still sees the edit as being checked, and is ignored.
+  // clicks again. That click still sees the edit as being checked, and is ignored. (With
+  // `checking` as a ref, cleared before the redraw, this test fails.)
   vi.spyOn(console, 'error').mockImplementation(() => {}) // React's act warning.
   check.resolve(blocked(true))
   for (let i = 0; i < 5; i++) await Promise.resolve() // The reply lands; no render yet.
@@ -306,7 +307,9 @@ test('an edit that cannot be checked is undone', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'wall' }))
   fireEvent.click(cells[5])
   const alert = await screen.findByRole('alert')
-  expect(alert.textContent).toContain('backend down')
+  expect(alert.textContent).toBe(
+    "Edit undone, since it couldn't be checked. Error: backend down",
+  )
   expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · floor')
 })
 
