@@ -1,11 +1,13 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
 import * as client from './api/client'
+import type { ValidationResult } from './api/client'
 
 vi.mock('./api/client')
 
 beforeEach(() => {
+  vi.resetAllMocks()
   vi.mocked(client.getSpec).mockResolvedValue({
     theme: 'dungeon',
     mood: 'quiet',
@@ -31,6 +33,22 @@ beforeEach(() => {
     violations: [],
     explanations: [],
   })
+})
+
+// A promise the test settles by hand, to control the order replies arrive in.
+function later<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
+const issues = (text: string): ValidationResult => ({
+  violations: [],
+  explanations: [{ code: 'door_count', text }],
 })
 
 // Types an idea and waits for the generated map's cells.
@@ -81,4 +99,154 @@ test('each edit runs validation', async () => {
   await screen.findByText('Wrong number of doors.')
   const [, map] = vi.mocked(client.validate).mock.lastCall!
   expect(map.tiles[0]).toEqual([1, 1, 1, 1])
+})
+
+test('a slow reply for an older edit does not replace newer issues', async () => {
+  const older = later<ValidationResult>()
+  const newer = later<ValidationResult>()
+  vi.mocked(client.validate)
+    .mockReturnValueOnce(older.promise)
+    .mockReturnValueOnce(newer.promise)
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  fireEvent.click(cells[6])
+  await act(async () => newer.resolve(issues('Newer.')))
+  await act(async () => older.resolve(issues('Older.')))
+  screen.getByText('Newer.')
+  expect(screen.queryByText('Older.')).toBeNull()
+})
+
+test('a reply for the old map does not land on a new map', async () => {
+  const old = later<ValidationResult>()
+  vi.mocked(client.validate).mockReturnValueOnce(old.promise)
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  vi.mocked(client.generate).mockResolvedValue({
+    ...(await vi.mocked(client.generate).mock.results[0].value),
+    explanations: [{ code: 'door_count', text: 'New map.' }],
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  await screen.findByText('New map.')
+  await act(async () => old.resolve(issues('Old map.')))
+  expect(screen.queryByText('Old map.')).toBeNull()
+})
+
+test('while a map is being made, Generate is disabled and edits are ignored', async () => {
+  const cells = await generateMap()
+  const spec = later<client.MapSpec>()
+  vi.mocked(client.getSpec).mockReturnValueOnce(spec.promise)
+  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  const button = screen.getByRole('button', { name: 'Generating…' })
+  expect(button).toHaveProperty('disabled', true)
+  fireEvent.submit(button.closest('form')!)
+  expect(client.getSpec).toHaveBeenCalledTimes(2)
+
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  expect(client.validate).not.toHaveBeenCalled()
+  expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · floor')
+
+  await act(async () =>
+    spec.resolve(await vi.mocked(client.getSpec).mock.results[0].value),
+  )
+  await screen.findByRole('button', { name: 'Generate' })
+})
+
+test('an error goes away once a later edit validates', async () => {
+  vi.mocked(client.validate)
+    .mockRejectedValueOnce(new Error('backend down'))
+    .mockResolvedValueOnce(issues('Fine again.'))
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  await screen.findByRole('alert')
+  fireEvent.click(cells[6])
+  await screen.findByText('Fine again.')
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test('the seed is kept and shown', async () => {
+  const random = vi.spyOn(Math, 'random').mockReturnValue(0.5)
+  await generateMap()
+  random.mockRestore()
+  screen.getByText('Seed: 1073741824')
+  expect(client.generate).toHaveBeenCalledWith(expect.anything(), 1073741824)
+})
+
+test('a failed Generate keeps the reply for the edit before it', async () => {
+  const pending = later<ValidationResult>()
+  vi.mocked(client.validate).mockReturnValueOnce(pending.promise)
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  vi.mocked(client.getSpec).mockRejectedValueOnce(new Error('LLM down'))
+  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  await screen.findByRole('alert')
+  await act(async () => pending.resolve(issues('After the edit.')))
+  screen.getByText('After the edit.')
+})
+
+test('a good validation does not clear a Generate error', async () => {
+  vi.mocked(client.validate).mockResolvedValue(issues('Fine.'))
+  const cells = await generateMap()
+  vi.mocked(client.getSpec).mockRejectedValueOnce(new Error('LLM down'))
+  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  await screen.findByRole('alert')
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  await screen.findByText('Fine.')
+  expect(screen.getByRole('alert').textContent).toContain('LLM down')
+})
+
+test('a new map clears a validation error from the old map', async () => {
+  const failing = later<ValidationResult>()
+  vi.mocked(client.validate).mockReturnValueOnce(failing.promise)
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  const spec = later<client.MapSpec>()
+  vi.mocked(client.getSpec).mockReturnValueOnce(spec.promise)
+  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  await act(async () => failing.reject(new Error('backend down')))
+  screen.getByRole('alert')
+  await act(async () =>
+    spec.resolve(await vi.mocked(client.getSpec).mock.results[0].value),
+  )
+  await screen.findByRole('button', { name: 'Generate' })
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test('a failed validation does not replace a Generate error', async () => {
+  vi.mocked(client.validate)
+    .mockRejectedValueOnce(new Error('backend down'))
+    .mockResolvedValueOnce(issues('Fine.'))
+  const cells = await generateMap()
+  vi.mocked(client.getSpec).mockRejectedValueOnce(new Error('LLM down'))
+  fireEvent.click(screen.getByRole('button', { name: 'Generate' }))
+  await screen.findByRole('alert')
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2))
+  fireEvent.click(cells[6])
+  await screen.findByText('Fine.')
+  const [alert] = screen.getAllByRole('alert')
+  expect(alert.textContent).toContain('LLM down')
+  expect(screen.getAllByRole('alert')).toHaveLength(1)
+})
+
+test('an export error goes away when export is tried again', async () => {
+  URL.createObjectURL = vi.fn(() => 'blob:map')
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  vi.mocked(client.exportTiled)
+    .mockRejectedValueOnce(new Error('export failed'))
+    .mockResolvedValueOnce({ type: 'map' })
+  await generateMap()
+  const exportButton = screen.getByRole('button', { name: 'Export Tiled JSON' })
+  fireEvent.click(exportButton)
+  await screen.findByRole('alert')
+  fireEvent.click(exportButton)
+  await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+  vi.restoreAllMocks()
 })
