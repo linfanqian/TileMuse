@@ -52,4 +52,6 @@ test('show on map gives the cell, and only issues with a cell have it', () => {
 test('says so when there are no issues', () => {
   render(<ViolationList violations={[]} explanations={[]} onShow={() => {}} />)
   screen.getByText('No issues found.')
+  // The count isn't shown as an error when there is nothing wrong.
+  expect(screen.getByText('0').className).toBe('issue-count none')
 })

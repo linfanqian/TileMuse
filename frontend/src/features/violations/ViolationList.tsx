@@ -19,7 +19,10 @@ export default function ViolationList({
   return (
     <section className="issues" aria-labelledby="issues-title">
       <h2 id="issues-title">
-        Issues <span className="issue-count">{explanations.length}</span>
+        Issues{' '}
+        <span className={`issue-count${explanations.length ? '' : ' none'}`}>
+          {explanations.length}
+        </span>
       </h2>
       {explanations.length === 0 ? (
         <p className="no-issues">No issues found.</p>

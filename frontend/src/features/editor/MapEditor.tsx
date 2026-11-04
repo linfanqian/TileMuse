@@ -109,6 +109,14 @@ export default function MapEditor({
   // The status line owns the hovered cell, so hovering redraws only that line, not the grid.
   const setHover = useRef<SetHover>(null)
 
+  // Brings a pointed-out cell into view, since a big map scrolls past the screen.
+  const grid = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!highlight) return
+    const cell = grid.current?.children[highlight.y * map.width + highlight.x]
+    cell?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+  }, [highlight, map.width])
+
   // Built once per map, so drawing doesn't scan every object for every cell.
   const objectIndex = useMemo(() => indexObjects(map), [map])
   const objectOn = (x: number, y: number) =>
@@ -194,6 +202,7 @@ export default function MapEditor({
       >
         {drawn && <TileCanvas drawn={drawn} onPainted={setArt} />}
         <div
+          ref={grid}
           role="grid"
           onMouseLeave={() => setHover.current?.(null)}
           style={{

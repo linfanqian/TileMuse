@@ -165,7 +165,10 @@ export default function Interview({ onGenerate, generating }: Props) {
         question={question}
         spec={spec}
         generating={generating}
-        onGenerate={(ready) => onGenerate(ready, turns)}
+        // A message still waiting for its reply hasn't changed the spec, so it stays out.
+        onGenerate={(ready) =>
+          onGenerate(ready, pending ? turns.slice(0, -1) : turns)
+        }
       />
     </div>
   )

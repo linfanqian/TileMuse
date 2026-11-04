@@ -343,7 +343,9 @@ test('a stalled sheet load is dropped after a while, so a later redraw tries aga
   expect(loads).toHaveLength(2)
 })
 
-test('outlines the cell it is asked to point out', () => {
+test('outlines the cell it is asked to point out, and scrolls to it', () => {
+  const scroll = vi.fn()
+  Element.prototype.scrollIntoView = scroll
   render(
     <MapEditor
       map={start}
@@ -355,4 +357,7 @@ test('outlines the cell it is asked to point out', () => {
   const cells = screen.getAllByRole('gridcell')
   expect(cells[1 * start.width + 2].style.boxShadow).not.toBe('')
   expect(cells.filter((c) => c.style.boxShadow !== '')).toHaveLength(1)
+  // A big map scrolls, so the cell is brought into view.
+  expect(scroll.mock.contexts).toEqual([cells[1 * start.width + 2]])
+  delete (Element.prototype as Partial<Element>).scrollIntoView
 })
