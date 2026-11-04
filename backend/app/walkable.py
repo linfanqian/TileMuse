@@ -1,4 +1,5 @@
-"""Where a player can walk. Shared by the generator and the validator."""
+"""Where a player can walk, and the doors that lead out. Shared by the generator, the validator,
+and the Tiled export."""
 
 from collections import deque
 from collections.abc import Collection, Sequence
@@ -15,6 +16,18 @@ def neighbors(cell: Cell) -> tuple[Cell, Cell, Cell, Cell]:
     """The cells a player can step to from `cell`: right, left, down, and up."""
     x, y = cell
     return (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)
+
+
+def exits(tiles: Sequence[Sequence[Tile]]) -> list[Cell]:
+    """Door tiles on the outer wall, row by row. A door tile inside the room leads nowhere, so it
+    isn't one."""
+    h = len(tiles)
+    return [
+        (x, y)
+        for y, row in enumerate(tiles)
+        for x, tile in enumerate(row)
+        if tile == Tile.DOOR and (x in (0, len(row) - 1) or y in (0, h - 1))
+    ]
 
 
 def reachable(tiles: Sequence[Sequence[Tile]], blocked: Collection[Cell], start: Cell) -> set[Cell]:

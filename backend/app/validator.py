@@ -12,21 +12,9 @@ from itertools import combinations, product
 
 from app.models import GameMap, MapObject, Tile, Violation
 from app.spec import MapSpec, MaxDensityRule, MinDistanceRule, ObjectKind, density
-from app.walkable import BLOCKING_KINDS, Cell, neighbors, reachable
+from app.walkable import BLOCKING_KINDS, Cell, exits, neighbors, reachable
 
 Rule = Callable[[GameMap, MapSpec], list[Violation]]
-
-
-def _doors(game_map: GameMap) -> list[Cell]:
-    """Door tiles on the outer wall. A door tile inside the room leads nowhere, so it doesn't
-    count."""
-    w, h = game_map.width, game_map.height
-    return [
-        (x, y)
-        for y, row in enumerate(game_map.tiles)
-        for x, tile in enumerate(row)
-        if tile == Tile.DOOR and (x in (0, w - 1) or y in (0, h - 1))
-    ]
 
 
 def _on_wall(game_map: GameMap, obj: MapObject) -> bool:
@@ -47,7 +35,7 @@ def _missing_objects(game_map: GameMap, spec: MapSpec) -> list[Violation]:
 
 
 def _door_count(game_map: GameMap, spec: MapSpec) -> list[Violation]:
-    found = len(_doors(game_map))
+    found = len(exits(game_map.tiles))
     if found == spec.doors:
         return []
     return [Violation(code="door_count", details={"expected": spec.doors, "found": found})]
@@ -86,7 +74,7 @@ def _unreachable(game_map: GameMap, spec: MapSpec) -> list[Violation]:
     doors, starting from a spawn, or from a door if no spawn can be stood on. A chest blocks
     movement, so it counts as reachable when the player can stand next to it. Objects on walls are
     left to _objects_on_walls."""
-    doors = _doors(game_map)
+    doors = exits(game_map.tiles)
     blocked = {(o.x, o.y) for o in game_map.objects if o.kind in BLOCKING_KINDS}
     spawns = [(o.x, o.y) for o in game_map.objects if o.kind == ObjectKind.PLAYER_SPAWN]
     walkable = _main_area(game_map.tiles, blocked, spawns, set(doors)) or _main_area(
