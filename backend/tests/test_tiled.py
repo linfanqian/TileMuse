@@ -97,12 +97,13 @@ def test_every_kit_draws_each_cell_with_its_tiles(kit_name):
         assert obj["y"] == (4 + shift + 1) * SIZE
     assert [obj["x"] for obj in group["objects"]] == [(1 + i) * SIZE for i in range(6)]
 
-    # Every gid points at a tile on the sheet.
-    tileset = out["tilesets"][0]
+    # Every gid points at a tile on the sheet, and object ids count up from 1.
+    last_gid = FIRST_GID + out["tilesets"][0]["tilecount"] - 1
     for name in ("floor", "walls"):
-        assert all(
-            0 <= gid < FIRST_GID + tileset["tilecount"] for row in layer(out, name) for gid in row
-        )
+        assert all(0 <= gid <= last_gid for row in layer(out, name) for gid in row)
+    assert all(FIRST_GID <= obj["gid"] <= last_gid for obj in group["objects"])
+    assert [obj["id"] for obj in group["objects"]] == list(range(1, 7))
+    assert out["nextobjectid"] == 7
 
 
 def test_tileset_points_at_the_sheet():
