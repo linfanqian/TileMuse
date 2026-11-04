@@ -3,6 +3,8 @@ import type { components, paths } from './schema'
 
 type Schemas = components['schemas']
 export type MapSpec = Schemas['MapSpec']
+export type Kit = MapSpec['kit']
+export type Drawing = Schemas['DrawResult']
 export type GameMap = Schemas['GameMap']
 export type ObjectKind = Schemas['ObjectKind']
 export type Tile = Schemas['Tile']
@@ -52,6 +54,13 @@ async function post<P extends PostPath>(
 
 export const generate = (spec: MapSpec, seed: number) =>
   post('/api/generate', { spec, seed })
+
+// The map's tiles for a kit, drawn by the backend the same way the export draws them.
+export const drawMap = (kit: Kit, map: GameMap) =>
+  post('/api/draw', { kit, map })
+
+// The sheet that `Drawing` tile ids point into.
+export const TILESHEET_URL = '/api/tilesheet.png'
 
 export const validate = (spec: MapSpec, map: GameMap) =>
   post('/api/validate', { spec, map })

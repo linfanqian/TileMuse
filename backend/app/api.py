@@ -10,15 +10,17 @@ from random import Random
 from typing import Annotated, Literal, Self
 
 from fastapi import APIRouter, Response
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.drawing import Drawing, draw
 from app.explainer import explain
 from app.generator import generate
 from app.interview import ChatMessage, InterviewResult, interview
 from app.kits import ASSETS
 from app.llm import LLMError, LLMUnavailable, TextDelta
 from app.models import Explanation, GameMap, Violation
-from app.spec import MapSpec, SpecDraft
+from app.spec import Kit, MapSpec, SpecDraft
 from app.tiled import to_tiled
 from app.tileset import load_tileset
 from app.validator import validate
@@ -96,6 +98,19 @@ class ExportRequest(BaseModel):
     map: GameMap
 
 
+class DrawRequest(BaseModel):
+    kit: Kit
+    map: GameMap
+
+
+class DrawResult(Drawing):
+    """The map's tiles, as sheet ids, and how to find an id on the sheet: its cell is
+    (id % columns, id // columns), each `tile_size` pixels square."""
+
+    tile_size: int
+    columns: int
+
+
 class ValidationResult(BaseModel):
     violations: list[Violation]
     explanations: list[Explanation]
@@ -145,6 +160,23 @@ def generate_map(req: GenerateRequest) -> GenerateResult:
 @router.post("/validate")
 def validate_map(req: ValidateRequest) -> ValidationResult:
     return check(req.map, req.spec)
+
+
+@router.post("/draw")
+def draw_map(req: DrawRequest) -> DrawResult:
+    """The tiles the editor draws, the same ones the export uses."""
+    catalog = load_tileset().catalog
+    drawing = draw(req.map, req.kit)
+    # The drawing is already checked, so it is passed on as is rather than checked again.
+    return DrawResult.model_construct(
+        **dict(drawing), tile_size=catalog.tile_size, columns=catalog.columns
+    )
+
+
+@router.get("/tilesheet.png", response_class=FileResponse)
+def tilesheet() -> FileResponse:
+    """The sheet every kit's tiles come from."""
+    return FileResponse(ASSETS / load_tileset().catalog.image, media_type="image/png")
 
 
 EXPORT_NAME = "tilemuse-map"

@@ -1,5 +1,5 @@
-"""Map + kit -> the sheet tiles that draw it. A shared module: the exporter uses it now, and
-drawing real tiles in the editor (#37) can reuse it.
+"""Map + kit -> the sheet tiles that draw it. Shared, so the exporter and the editor (through
+`/api/draw`) draw a map the same way.
 
 The drawing has three layers: floor, walls (doors included), and objects. A kit whose top wall
 is two tiles tall draws one extra row at the top. So the drawing is one row taller than the map,
@@ -14,7 +14,7 @@ Rules, from the tileset README:
   leads nowhere, so it is drawn as floor.
 """
 
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict
 
 from app.models import GameMap, Tile
 from app.spec import ObjectKind
@@ -24,16 +24,18 @@ Cell = tuple[int, int]  # x, y
 Layer = list[list[int | None]]  # [y][x] sheet ids; None draws nothing
 
 
-@dataclass(frozen=True)
-class DrawnObject:
+class DrawnObject(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     kind: str
     x: int  # cell in the drawing
     y: int
     tile: int | None  # sheet id, or None for a kind the kit has no tile for
 
 
-@dataclass(frozen=True)
-class Drawing:
+class Drawing(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     width: int
     height: int
     shift: int  # map row y is drawn at row y + shift
@@ -70,10 +72,15 @@ def draw(game_map: GameMap, kit_name: str) -> Drawing:
                 _door(walls, kit, entries, tiles, x, y, w, h, shift)
 
     objects = [
-        DrawnObject(obj.kind, obj.x, obj.y + shift, _object_tile(kit, entries, obj.kind))
+        DrawnObject(
+            kind=obj.kind,
+            x=obj.x,
+            y=obj.y + shift,
+            tile=_object_tile(kit, entries, obj.kind),
+        )
         for obj in game_map.objects
     ]
-    return Drawing(w, height, shift, floor, walls, objects)
+    return Drawing(width=w, height=height, shift=shift, floor=floor, walls=walls, objects=objects)
 
 
 def _place(walls: Layer, x: int, y: int, entry: TileEntry) -> None:

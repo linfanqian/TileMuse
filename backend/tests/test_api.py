@@ -9,9 +9,12 @@ from fastapi.testclient import TestClient
 from app import api
 from app.api import MAX_MESSAGES
 from app.interview import MAX_MESSAGE
+from app.kits import ASSETS
 from app.llm import TextDelta
 from app.main import app
+from app.models import GameMap
 from app.spec import MapSpec, SpecDraft
+from app.tiled import FIRST_GID, to_tiled
 
 client = TestClient(app)
 
@@ -72,6 +75,38 @@ def test_validate_explains_each_violation(make_spec):
         "max_density",
     ]
     assert body["explanations"][0]["text"].startswith("Too few of player spawn")
+
+
+def test_draw_returns_the_tiles_the_export_uses(make_spec):
+    spec = make_spec(kit="dungeon", objects=[{"kind": "guard", "count": 1}])
+    game_map = client.post(
+        "/api/generate", json={"spec": spec.model_dump(mode="json"), "seed": 1}
+    ).json()["map"]
+    res = client.post("/api/draw", json={"kit": "dungeon", "map": game_map})
+    assert res.status_code == 200
+    drawing = res.json()
+    assert (drawing["tile_size"], drawing["columns"]) == (16, 12)
+    assert (drawing["width"], drawing["height"], drawing["shift"]) == (16, 13, 1)
+
+    tiled = to_tiled(GameMap.model_validate(game_map), "dungeon")
+    for name in ("floor", "walls"):
+        drawn = [0 if t is None else t + FIRST_GID for row in drawing[name] for t in row]
+        assert drawn == next(layer for layer in tiled["layers"] if layer["name"] == name)["data"]
+    ((obj,), (exported,)) = drawing["objects"], tiled["layers"][2]["objects"]
+    assert obj["tile"] + FIRST_GID == exported["gid"]
+
+
+def test_draw_rejects_an_unknown_kit():
+    game_map = {"width": 1, "height": 1, "tiles": [[0]]}
+    res = client.post("/api/draw", json={"kit": "moon", "map": game_map})
+    assert res.status_code == 422
+
+
+def test_serves_the_tile_sheet():
+    res = client.get("/api/tilesheet.png")
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "image/png"
+    assert res.content == (ASSETS / "tilesheet.png").read_bytes()
 
 
 def test_rejects_map_whose_tiles_do_not_match_its_size(make_spec):

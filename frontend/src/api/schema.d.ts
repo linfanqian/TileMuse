@@ -76,6 +76,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/draw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draw Map
+         * @description The tiles the editor draws, the same ones the export uses.
+         */
+        post: operations["draw_map_api_draw_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tilesheet.png": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tilesheet
+         * @description The sheet every kit's tiles come from.
+         */
+        get: operations["tilesheet_api_tilesheet_png_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/export": {
         parameters: {
             query?: never;
@@ -109,6 +149,49 @@ export interface components {
             role: "user" | "assistant";
             /** Content */
             content: string;
+        };
+        /** DrawRequest */
+        DrawRequest: {
+            /**
+             * Kit
+             * @enum {string}
+             */
+            kit: "dungeon" | "town" | "farm" | "factory";
+            map: components["schemas"]["GameMap"];
+        };
+        /**
+         * DrawResult
+         * @description The map's tiles, as sheet ids, and how to find an id on the sheet: its cell is
+         *     (id % columns, id // columns), each `tile_size` pixels square.
+         */
+        DrawResult: {
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /** Shift */
+            shift: number;
+            /** Floor */
+            floor: (number | null)[][];
+            /** Walls */
+            walls: (number | null)[][];
+            /** Objects */
+            objects: components["schemas"]["DrawnObject"][];
+            /** Tile Size */
+            tile_size: number;
+            /** Columns */
+            columns: number;
+        };
+        /** DrawnObject */
+        DrawnObject: {
+            /** Kind */
+            kind: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Tile */
+            tile: number | null;
         };
         /** Explanation */
         Explanation: {
@@ -498,6 +581,57 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    draw_map_api_draw_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DrawRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DrawResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tilesheet_api_tilesheet_png_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
