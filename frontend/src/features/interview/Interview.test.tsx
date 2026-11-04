@@ -117,7 +117,15 @@ test('Generate map unlocks once the spec is ready', async () => {
   say('20 by 14')
   await screen.findByText('The spec is ready to generate.')
   fireEvent.click(generate)
-  expect(onGenerate).toHaveBeenCalledWith(SPEC)
+  const [spec, turns] = onGenerate.mock.lastCall!
+  expect(spec).toEqual(SPEC)
+  // The chat goes along too, so the editor can show it.
+  expect(turns.map((t: { content: string }) => t.content)).toEqual([
+    'A creepy library',
+    asking.message,
+    '20 by 14',
+    ready.message,
+  ])
 })
 
 test('streamed text shows while the turn runs, then the final message', async () => {
@@ -202,4 +210,21 @@ test('repeated suggestions each get a chip', async () => {
   // React reports a duplicate key through console.error.
   expect(error).not.toHaveBeenCalled()
   error.mockRestore()
+})
+
+test('a message still waiting for its reply is not sent with the spec', async () => {
+  vi.mocked(client.interview)
+    .mockResolvedValueOnce(ready)
+    .mockReturnValueOnce(new Promise(() => {})) // The second reply never comes.
+  const { say, onGenerate } = setup()
+  say('A creepy library')
+  await screen.findByText('The spec is ready to generate.')
+  say('Make it bigger')
+  fireEvent.click(screen.getByRole('button', { name: 'Generate map' }))
+  const [, turns] = onGenerate.mock.lastCall!
+  // The map is made from the spec before that message, so the chat stops there too.
+  expect(turns.map((t: { content: string }) => t.content)).toEqual([
+    'A creepy library',
+    ready.message,
+  ])
 })

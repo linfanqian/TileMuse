@@ -5,6 +5,8 @@ The drawing has three layers: floor, walls (doors included), and objects. A kit 
 is two tiles tall draws one extra row at the top. So the drawing is one row taller than the map,
 and map row y is drawn at row y + shift, where shift is 1 for those kits and 0 for the rest.
 
+`tool_tiles` gives the tiles each editor tool paints, so the editor's palette shows the kit.
+
 Rules, from the tileset README:
 - The floor fills the whole drawing first, since some walls are see-through.
 - Openings are three cells wide: a wall end, the floor, and a wall end. The middle stays empty
@@ -83,6 +85,21 @@ def draw(game_map: GameMap, kit_name: str) -> Drawing:
     return Drawing(width=w, height=height, shift=shift, floor=floor, walls=walls, objects=objects)
 
 
+def tool_tiles(kit_name: str) -> dict[str, list[int]]:
+    """How each editor tool looks in this kit: the sheet ids it draws, left to right. A wall
+    painted inside the room, a top door (its whole opening), and one tile per object kind."""
+    tileset = load_tileset()
+    kit = tileset.kits[kit_name]
+    entries = {e.name: e for e in tileset.catalog.entries}
+    door = entries[kit.doors["top"]]
+    return {
+        "floor": [entries[kit.floor].id],
+        "wall": [_lowest(entries[kit.walls["bottom"]])],
+        "door": door.parts or [door.id],
+        **{kind.value: [entries[name].id] for kind, name in kit.objects.items()},
+    }
+
+
 def _place(walls: Layer, x: int, y: int, entry: TileEntry) -> None:
     """Places an entry with its top-left tile at drawing cell (x, y), clipped to the drawing."""
     width = entry.footprint[0]
@@ -106,11 +123,14 @@ def _wall(
     if y == 0:
         _place(walls, x, 0, entries[kit.walls[piece or "top"]])  # Fills every top-wall row.
         return
-    entry = entries[kit.walls[piece or "bottom"]]
-    width, tall = entry.footprint
     # Below the top wall there is room for one row, so a tall piece gives only its lowest tile.
-    tile = (entry.parts or [entry.id])[(tall - 1) * width]
-    walls[y + shift][x] = tile
+    walls[y + shift][x] = _lowest(entries[kit.walls[piece or "bottom"]])
+
+
+def _lowest(entry: TileEntry) -> int:
+    """The lowest-left tile of an entry, which is all of it that fits in one row."""
+    width, tall = entry.footprint
+    return (entry.parts or [entry.id])[(tall - 1) * width]
 
 
 def _wall_piece(x: int, y: int, w: int, h: int) -> WallPiece | None:

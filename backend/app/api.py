@@ -13,7 +13,7 @@ from fastapi import APIRouter, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.drawing import Drawing, draw
+from app.drawing import Drawing, draw, tool_tiles
 from app.explainer import explain
 from app.generator import generate
 from app.interview import ChatMessage, InterviewResult, interview
@@ -109,6 +109,8 @@ class DrawResult(Drawing):
 
     tile_size: int
     columns: int
+    # The sheet ids each editor tool paints in this kit, so its palette shows the kit's tiles.
+    tools: dict[str, list[int]]
 
 
 class ValidationResult(BaseModel):
@@ -169,7 +171,10 @@ def draw_map(req: DrawRequest) -> DrawResult:
     drawing = draw(req.map, req.kit)
     # The drawing is already checked, so it is passed on as is rather than checked again.
     return DrawResult.model_construct(
-        **dict(drawing), tile_size=catalog.tile_size, columns=catalog.columns
+        **dict(drawing),
+        tile_size=catalog.tile_size,
+        columns=catalog.columns,
+        tools=tool_tiles(req.kit),
     )
 
 

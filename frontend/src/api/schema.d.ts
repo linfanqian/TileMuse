@@ -181,6 +181,10 @@ export interface components {
             tile_size: number;
             /** Columns */
             columns: number;
+            /** Tools */
+            tools: {
+                [key: string]: number[];
+            };
         };
         /** DrawnObject */
         DrawnObject: {

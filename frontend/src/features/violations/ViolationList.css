@@ -1,0 +1,80 @@
+.issues h2 {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.issue-count {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fde7e7;
+  color: #b42318;
+  letter-spacing: 0;
+}
+
+.issue-count.none {
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+
+.issues ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.issue {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.issue.hard {
+  border-left-color: #d64545;
+  background: #fdf3f3;
+}
+
+.issue.spec {
+  border-left-color: #e0a526;
+}
+
+.issue h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.issue h3::first-letter {
+  text-transform: uppercase;
+}
+
+.issue p {
+  margin: 4px 0 0;
+  font-size: 0.875rem;
+}
+
+.issue .issue-kind {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.issue .link {
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.875rem;
+}
+
+.no-issues {
+  margin: 0;
+  color: #23743a;
+}

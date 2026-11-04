@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app import api
 from app.api import MAX_MESSAGES
+from app.drawing import tool_tiles
 from app.interview import MAX_MESSAGE
 from app.kits import ASSETS
 from app.llm import TextDelta
@@ -87,6 +88,7 @@ def test_draw_returns_the_tiles_the_export_uses(make_spec):
     drawing = res.json()
     assert (drawing["tile_size"], drawing["columns"]) == (16, 12)
     assert (drawing["width"], drawing["height"], drawing["shift"]) == (16, 13, 1)
+    assert drawing["tools"] == tool_tiles("dungeon")  # So the palette shows the kit.
 
     tiled = to_tiled(GameMap.model_validate(game_map), "dungeon")
     for name in ("floor", "walls"):

@@ -7,14 +7,12 @@ import {
 } from '../../api/client'
 import { MAX_MESSAGE, trimHistory } from './fields'
 import SpecPanel from './SpecPanel'
+import type { Turn } from './Transcript'
 import './Interview.css'
 
-type Turn =
-  | { role: 'user'; content: string }
-  | { role: 'assistant'; content: string; question: Question | null }
-
 type Props = {
-  onGenerate: (spec: MapSpec) => void
+  // Gets the chat too, so the editor can show what the map was made from.
+  onGenerate: (spec: MapSpec, turns: Turn[]) => void
   // True while App is making a map from the spec.
   generating: boolean
 }
@@ -167,7 +165,10 @@ export default function Interview({ onGenerate, generating }: Props) {
         question={question}
         spec={spec}
         generating={generating}
-        onGenerate={onGenerate}
+        // A message still waiting for its reply hasn't changed the spec, so it stays out.
+        onGenerate={(ready) =>
+          onGenerate(ready, pending ? turns.slice(0, -1) : turns)
+        }
       />
     </div>
   )

@@ -157,6 +157,10 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+// The canvas behind the map cells. Tool icons have canvases of their own.
+const mapCanvas = () =>
+  document.querySelector<HTMLCanvasElement>('.map-frame canvas')
+
 // Waits until the canvas has painted, which turns the cell colors off.
 const painted = (cell: HTMLElement) =>
   waitFor(() => expect(cell.style.background).toBe(''))
@@ -173,6 +177,8 @@ function drawingOf(map: GameMap): Drawing {
     floor: Array.from({ length: rows }, () => Array(map.width).fill(48)),
     walls: Array.from({ length: rows }, () => Array(map.width).fill(null)),
     objects: map.objects.map((o) => ({ ...o, y: o.y + 1, tile: 85 })),
+    // A three-tile door, like a fence opening, and one tile for each other tool.
+    tools: { floor: [48], wall: [25], door: [5, 48, 4], player_spawn: [85] },
   }
 }
 
@@ -183,7 +189,7 @@ test('draws the kit tiles under the cells once they arrive', async () => {
   expect(client.drawMap).toHaveBeenCalledWith('dungeon', start)
 
   const canvas = await waitFor(() => {
-    const found = document.querySelector('canvas')
+    const found = mapCanvas()
     expect(found).not.toBeNull()
     return found!
   })
@@ -226,7 +232,7 @@ test('edits still work over the kit tiles, and each edit is drawn again', async 
 test('without the kit tiles, cells keep their colors and markers', async () => {
   const { cell } = setup()
   await waitFor(() => expect(client.drawMap).toHaveBeenCalled())
-  expect(document.querySelector('canvas')).toBeNull()
+  expect(mapCanvas()).toBeNull()
   expect(cell(1, 1).textContent).toBe('P')
   expect(cell(0, 0).style.background).not.toBe('')
 })
@@ -266,7 +272,10 @@ test('a door inside the room stays visible, since the kit draws it as floor', as
   fireEvent.click(cell(2, 1))
   // Wait until the canvas has painted the map with the door, so the cell isn't colored
   // only because the canvas is behind.
-  await waitFor(() => expect(context.clearRect).toHaveBeenCalledTimes(2))
+  // The map canvas clears its whole 4×4-tile area; tool icons clear one row of tiles.
+  const mapPaints = () =>
+    context.clearRect.mock.calls.filter((args) => args[3] === 4 * 16).length
+  await waitFor(() => expect(mapPaints()).toBe(2))
   await waitFor(() => expect(cell(1, 1).style.background).toBe(''))
   expect(cell(2, 1).style.background).not.toBe('')
 })
@@ -275,7 +284,7 @@ test('if the canvas cannot paint, cells keep their colors and markers', async ()
   stubCanvas(null)
   vi.mocked(client.drawMap).mockImplementation(async (_, map) => drawingOf(map))
   const { cell } = setup()
-  await waitFor(() => expect(document.querySelector('canvas')).not.toBeNull())
+  await waitFor(() => expect(mapCanvas()).not.toBeNull())
   await waitFor(() =>
     expect(HTMLCanvasElement.prototype.getContext).toHaveBeenCalled(),
   )
@@ -341,4 +350,74 @@ test('a stalled sheet load is dropped after a while, so a later redraw tries aga
   rerender(show(start))
   await settle()
   expect(loads).toHaveLength(2)
+})
+
+test('outlines the cell it is asked to point out, and scrolls to it', () => {
+  const scroll = vi.fn()
+  Element.prototype.scrollIntoView = scroll
+  render(
+    <MapEditor
+      map={start}
+      kit="dungeon"
+      onChange={() => {}}
+      highlight={{ x: 2, y: 1 }}
+    />,
+  )
+  const cells = screen.getAllByRole('gridcell')
+  expect(cells[1 * start.width + 2].style.boxShadow).not.toBe('')
+  expect(cells.filter((c) => c.style.boxShadow !== '')).toHaveLength(1)
+  // A big map scrolls, so the cell is brought into view.
+  expect(scroll.mock.contexts).toEqual([cells[1 * start.width + 2]])
+  delete (Element.prototype as Partial<Element>).scrollIntoView
+})
+
+test('the tool buttons show the kit tiles once a drawing says what they are', async () => {
+  const context = stubCanvas() as { drawImage: ReturnType<typeof vi.fn> }
+  let arrive!: (drawing: Drawing) => void
+  vi.mocked(client.drawMap).mockReturnValue(new Promise((r) => (arrive = r)))
+  setup()
+  const button = (name: string) => screen.getByRole('button', { name })
+  // Until then, colors and markers.
+  expect(button('wall').querySelector('canvas')).toBeNull()
+  expect(button('player spawn').textContent).toBe('P')
+
+  await act(async () => arrive(drawingOf(start)))
+  await waitFor(() =>
+    expect(button('door').querySelector('canvas')?.style.display).toBe('block'),
+  )
+  // The door is a three-tile opening, drawn side by side from the sheet.
+  const door = button('door').querySelector('canvas')!
+  expect([door.width, door.height]).toEqual([3 * 16, 16])
+  // Tile 5 is row 0, column 5 of the 12-column sheet.
+  expect(context.drawImage).toHaveBeenCalledWith(
+    expect.anything(),
+    5 * 16,
+    0,
+    16,
+    16,
+    0,
+    0,
+    16,
+    16,
+  )
+  expect(button('player spawn').textContent).toBe('')
+  // A kind the drawing has no tiles for keeps its marker.
+  expect(button('guard').textContent).toBe('G')
+})
+
+test('a drawing without tool tiles keeps the colored tools', async () => {
+  stubCanvas()
+  // As an older backend sends it, before `tools` existed.
+  vi.mocked(client.drawMap).mockImplementation(async (_, map) => {
+    const { tools: _tools, ...drawing } = drawingOf(map)
+    return drawing as Drawing
+  })
+  const { cell } = setup()
+  await painted(cell(2, 1))
+  expect(
+    screen.getByRole('button', { name: 'wall' }).querySelector('canvas'),
+  ).toBeNull()
+  expect(screen.getByRole('button', { name: 'player spawn' }).textContent).toBe(
+    'P',
+  )
 })
