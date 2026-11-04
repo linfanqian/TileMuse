@@ -626,3 +626,49 @@ test('Show on map outlines the issue cell until the issues change', async () => 
   await screen.findByText('Fine.')
   expect(cells[1].style.boxShadow).toBe('')
 })
+
+test('undo steps back through kept edits, one at a time', async () => {
+  vi.mocked(client.validate).mockResolvedValue(issues('Fine.'))
+  const cells = await generateMap()
+  const undo = screen.getByRole('button', { name: 'Undo' })
+  expect(undo).toHaveProperty('disabled', true)
+
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  await waitFor(() => expect(undo).toHaveProperty('disabled', false))
+  fireEvent.click(cells[6])
+  await waitFor(() => expect(undo).toHaveProperty('disabled', false))
+
+  fireEvent.click(undo)
+  expect(cells[6].getAttribute('aria-label')).toBe('(2, 1) · floor')
+  expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · wall')
+  fireEvent.click(undo)
+  expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · floor')
+  expect(undo).toHaveProperty('disabled', true)
+})
+
+test('Ctrl+Z undoes the last kept edit', async () => {
+  vi.mocked(client.validate).mockResolvedValue(issues('Fine.'))
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  await screen.findByText('Fine.')
+
+  fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+  expect(cells[5].getAttribute('aria-label')).toBe('(1, 1) · floor')
+})
+
+test('a new map clears undo', async () => {
+  vi.mocked(client.validate).mockResolvedValue(issues('Fine.'))
+  const cells = await generateMap()
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  await screen.findByText('Fine.')
+
+  regenerate()
+  await screen.findAllByRole('gridcell')
+  expect(screen.getByRole('button', { name: 'Undo' })).toHaveProperty(
+    'disabled',
+    true,
+  )
+})

@@ -62,6 +62,17 @@
   margin-left: 0;
 }
 
+.map-actions .undo {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  background: var(--surface);
+}
+
+.map-actions .undo:disabled {
+  opacity: 0.6;
+}
+
 .seed {
   color: var(--text-muted);
 }

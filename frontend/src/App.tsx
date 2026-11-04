@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   exportMap,
   generate,
@@ -27,6 +27,13 @@ const REVOKE_AFTER_MS = 60_000
 const sameProblem = (v: Violation) =>
   JSON.stringify([v.code, v.x, v.y, v.details.kind])
 
+// A map before a kept edit, with the issues it had, so Undo can go back to it.
+type Kept = {
+  map: GameMap
+  violations: Violation[]
+  explanations: Explanation[]
+}
+
 // Composes the features. Features never import each other; shared state lives here.
 export default function App() {
   const [screen, setScreen] = useState<Screen>('interview')
@@ -48,6 +55,8 @@ export default function App() {
   const [explanations, setExplanations] = useState<Explanation[]>([])
   // Why the last edit was undone. Cleared by the next edit or a new map.
   const [undone, setUndone] = useState<string | null>(null)
+  // The maps before each kept edit, oldest first. Undo pops the newest. Cleared by a new map.
+  const [kept, setKept] = useState<Kept[]>([])
   // Two kinds of error, so neither can hide or clear the other. A validation error belongs to
   // the map on screen. An action error belongs to the last Generate or export.
   const [validateError, setValidateError] = useState<string | null>(null)
@@ -93,6 +102,7 @@ export default function App() {
       setViolations(result.violations)
       setExplanations(result.explanations)
       setUndone(null)
+      setKept([])
       setValidateError(null)
       setScreen('editor')
     } catch (e) {
@@ -117,10 +127,44 @@ export default function App() {
     setViolations([])
     setExplanations([])
     setUndone(null)
+    setKept([])
     setValidateError(null)
     setActionError(null)
     setBusy(false)
   }
+
+  // Steps back to the map before the last kept edit, with its issues. Not while an edit is
+  // being checked, since its reply would land on the restored map.
+  function undo() {
+    const last = kept.at(-1)
+    if (!last || checking || busy) return
+    setKept(kept.slice(0, -1))
+    setMap(last.map)
+    setViolations(last.violations)
+    setExplanations(last.explanations)
+    setShown(null)
+    setUndone(null)
+    setValidateError(null)
+  }
+
+  // Ctrl+Z, or Cmd+Z on macOS, undoes too. Text fields keep their own undo.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (screen !== 'editor' || e.shiftKey || e.altKey) return
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return
+      const target = e.target
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+      )
+        return
+      e.preventDefault()
+      undo()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  })
 
   // The edit shows at once. If it breaks a hard rule the map didn't already break, it is
   // undone and the toast says why. A problem the map already had doesn't block edits.
@@ -145,6 +189,7 @@ export default function App() {
         setMap(before)
         setUndone(result.explanations[broken].text)
       } else {
+        setKept((k) => [...k, { map: before, violations, explanations }])
         setViolations(result.violations)
         setExplanations(result.explanations)
         setShown(null) // The issue it pointed at may be gone.
@@ -212,6 +257,14 @@ export default function App() {
                 {seed}
               </button>
             </span>
+            <button
+              className="undo"
+              title="Undo the last kept edit (Ctrl+Z)"
+              onClick={undo}
+              disabled={kept.length === 0 || checking || busy}
+            >
+              Undo
+            </button>
             <button
               className="primary"
               onClick={handleExport}
