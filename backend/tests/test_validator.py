@@ -244,6 +244,8 @@ def every_violation(make_spec):
             doors=[(7, 1)],
             objects=[SPAWN, ("cover", 5, 1), ("light", 6, 2), ("guard", 6, 1), ("guard", 5, 2)],
         ),
+        # Nowhere to start: the spawn is under a cover and the door is walled in.
+        room(objects=[SPAWN, ("cover", 1, 1), ("cover", 3, 1)]),
     ]
     violations = [v for game_map in broken for v in validate(game_map, spec)]
     assert {v.code for v in violations} == set(TEMPLATES)
