@@ -117,7 +117,15 @@ test('Generate map unlocks once the spec is ready', async () => {
   say('20 by 14')
   await screen.findByText('The spec is ready to generate.')
   fireEvent.click(generate)
-  expect(onGenerate).toHaveBeenCalledWith(SPEC)
+  const [spec, turns] = onGenerate.mock.lastCall!
+  expect(spec).toEqual(SPEC)
+  // The chat goes along too, so the editor can show it.
+  expect(turns.map((t: { content: string }) => t.content)).toEqual([
+    'A creepy library',
+    asking.message,
+    '20 by 14',
+    ready.message,
+  ])
 })
 
 test('streamed text shows while the turn runs, then the final message', async () => {

@@ -66,9 +66,16 @@ type Props = {
   map: GameMap
   kit: Kit
   onChange: (map: GameMap) => void
+  // A cell to point out, such as an issue's place. Drawn with a red outline.
+  highlight?: Cell | null
 }
 
-export default function MapEditor({ map, kit, onChange }: Props) {
+export default function MapEditor({
+  map,
+  kit,
+  onChange,
+  highlight = null,
+}: Props) {
   const [tool, setTool] = useState<Tool>('select')
   const [selected, setSelected] = useState<Cell | null>(null)
   // The newest drawing from the backend. A failed request keeps the last one.
@@ -199,6 +206,7 @@ export default function MapEditor({ map, kit, onChange }: Props) {
             row.map((tile, x) => {
               const i = objectOn(x, y)
               const isSelected = selected?.x === x && selected.y === y
+              const isShown = highlight?.x === x && highlight.y === y
               const color = needsColor(x, y)
               return (
                 <div
@@ -216,6 +224,8 @@ export default function MapEditor({ map, kit, onChange }: Props) {
                     background: color ? TILE_COLORS[tile] : undefined,
                     outline: isSelected ? '2px solid #2f7de1' : undefined,
                     outlineOffset: -2,
+                    // Inside the cell, so it shows next to a selection outline.
+                    boxShadow: isShown ? 'inset 0 0 0 3px #d64545' : undefined,
                   }}
                 >
                   {i !== -1 &&

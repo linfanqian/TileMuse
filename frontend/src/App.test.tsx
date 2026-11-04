@@ -1,4 +1,12 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
 import * as client from './api/client'
@@ -369,7 +377,9 @@ test('the seed is kept and shown', async () => {
   const random = vi.spyOn(Math, 'random').mockReturnValue(0.5)
   await generateMap()
   random.mockRestore()
-  screen.getByText('Seed: 1073741824')
+  expect(screen.getByText('1073741824').parentElement!.textContent).toBe(
+    'Seed 1073741824',
+  )
   expect(client.generate).toHaveBeenCalledWith(expect.anything(), 1073741824)
 })
 
@@ -482,4 +492,77 @@ test('an export error goes away when export is tried again', async () => {
   await screen.findByRole('alert')
   fireEvent.click(exportButton)
   await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+})
+
+test('the editor shows the chat and the spec in its side rail', async () => {
+  await generateMap()
+  const rail = screen.getByRole('complementary', { name: 'Map details' })
+  // Chat is open first, with the interview that led to the map.
+  expect(within(rail).getByRole('tab', { name: 'Chat' })).toHaveProperty(
+    'ariaSelected',
+    'true',
+  )
+  within(rail).getByText('room')
+  within(rail).getByText('The spec is ready.')
+  fireEvent.click(within(rail).getByRole('tab', { name: 'Spec' }))
+  within(rail).getByText('Dungeon. Mood: quiet. 4×4 tiles, 1 door.')
+  // Read-only: the spec tab has nothing to edit.
+  expect(within(rail).queryByRole('textbox')).toBeNull()
+})
+
+test('the seed, Regenerate, and Export show only on the editor', async () => {
+  render(<App />)
+  expect(screen.queryByRole('button', { name: 'Regenerate' })).toBeNull()
+  cleanup()
+  await generateMap()
+  screen.getByRole('button', { name: 'Regenerate' })
+  fireEvent.click(screen.getByRole('button', { name: '1 · Interview' }))
+  expect(screen.queryByRole('button', { name: 'Export for Tiled' })).toBeNull()
+})
+
+test('Regenerate makes a new map from the same spec with a new seed', async () => {
+  const random = vi.spyOn(Math, 'random').mockReturnValue(0.5)
+  await generateMap()
+  const next = later<client.GenerateResult>()
+  vi.mocked(client.generate).mockReturnValueOnce(next.promise)
+  random.mockReturnValue(0.25)
+  fireEvent.click(screen.getByRole('button', { name: 'Regenerate' }))
+  expect(client.generate).toHaveBeenLastCalledWith(SPEC, 2 ** 29)
+  const button = screen.getByRole('button', { name: 'Regenerating…' })
+  expect(button).toHaveProperty('disabled', true)
+  await act(async () =>
+    next.resolve(await vi.mocked(client.generate).mock.results[0].value),
+  )
+  screen.getByText(String(2 ** 29))
+  // The chat that led to the spec is still there.
+  within(screen.getByRole('complementary', { name: 'Map details' })).getByText(
+    'room',
+  )
+})
+
+test('Show on map outlines the issue cell until the map changes', async () => {
+  vi.mocked(client.generate).mockResolvedValue({
+    ...(await client.generate(SPEC, 0)),
+    violations: [
+      { code: 'door_unreachable', x: 1, y: 0, details: {}, blocking: true },
+    ],
+    explanations: [
+      {
+        code: 'door_unreachable',
+        text: "The door at (1, 0) can't be reached.",
+      },
+    ],
+  })
+  vi.mocked(client.validate).mockResolvedValue(issues('Fine.'))
+  const cells = await generateMap()
+  const issues_ = screen.getByRole('region', { name: /Issues/ })
+  within(issues_).getByText("The door at (1, 0) can't be reached.")
+  fireEvent.click(within(issues_).getByRole('button', { name: 'Show on map' }))
+  expect(cells[1].style.boxShadow).not.toBe('')
+  expect(cells[0].style.boxShadow).toBe('')
+
+  fireEvent.click(screen.getByRole('button', { name: 'wall' }))
+  fireEvent.click(cells[5])
+  await screen.findByText('Fine.')
+  expect(cells[1].style.boxShadow).toBe('')
 })

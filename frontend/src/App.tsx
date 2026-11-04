@@ -9,7 +9,10 @@ import {
   type Violation,
 } from './api/client'
 import Interview from './features/interview/Interview'
+import SpecView from './features/interview/SpecView'
+import Transcript, { type Turn } from './features/interview/Transcript'
 import MapEditor from './features/editor/MapEditor'
+import SideRail from './features/rail/SideRail'
 import ViolationList from './features/violations/ViolationList'
 import './App.css'
 
@@ -30,6 +33,10 @@ export default function App() {
   const [spec, setSpec] = useState<MapSpec | null>(null)
   const [map, setMap] = useState<GameMap | null>(null)
   const [seed, setSeed] = useState<number | null>(null)
+  // The interview chat that led to the map, shown in the editor's Chat tab.
+  const [chat, setChat] = useState<Turn[]>([])
+  // The cell an issue's "Show on map" points at. Cleared when the map changes.
+  const [shown, setShown] = useState<{ x: number; y: number } | null>(null)
   // Counts generated maps. A new map remounts the editor, so no hover or selection carries over.
   const [generation, setGeneration] = useState(0)
   // The issues of the map on screen. An edit is checked against its violations.
@@ -54,7 +61,8 @@ export default function App() {
   // Bumped by Start over, so a map still being made for the old session is dropped.
   const current = useRef(0)
 
-  async function handleGenerate(nextSpec: MapSpec) {
+  // From the interview, with its chat. Regenerate passes no chat, so the old one stays.
+  async function handleGenerate(nextSpec: MapSpec, turns?: Turn[]) {
     if (busy) return
     const mine = current.current
     setBusy(true)
@@ -70,6 +78,8 @@ export default function App() {
       setSpec(nextSpec)
       setSeed(nextSeed)
       setMap(result.map)
+      if (turns) setChat(turns)
+      setShown(null)
       setGeneration((n) => n + 1)
       // A new map has no earlier map to go back to, so any hard-rule problem is listed here.
       // The generator keeps the hard rules unless the room is too full to join every door.
@@ -94,6 +104,8 @@ export default function App() {
     setSpec(null)
     setMap(null)
     setSeed(null)
+    setChat([])
+    setShown(null)
     setViolations([])
     setExplanations([])
     setUndone(null)
@@ -110,6 +122,7 @@ export default function App() {
     const request = (latest.current += 1)
     setChecking(true)
     setMap(next)
+    setShown(null)
     setUndone(null)
     try {
       const result = await validate(spec, next)
@@ -177,13 +190,33 @@ export default function App() {
             2 · Edit
           </button>
         </nav>
+        {screen === 'editor' && map && spec && (
+          <div className="map-actions">
+            <span className="seed">
+              Seed <code>{seed}</code>
+            </span>
+            <button
+              // A new seed gives a new layout for the same spec.
+              onClick={() => void handleGenerate(spec)}
+              disabled={busy}
+            >
+              {busy ? 'Regenerating…' : 'Regenerate'}
+            </button>
+            <button
+              className="primary"
+              onClick={handleExport}
+              disabled={checking}
+            >
+              Export for Tiled
+            </button>
+          </div>
+        )}
         <button className="start-over" onClick={startOver}>
           Start over
         </button>
       </header>
       {actionError && <p role="alert">{actionError}</p>}
       {validateError && <p role="alert">{validateError}</p>}
-      {undone && <p role="alert">Edit undone. {undone}</p>}
       {/* Hidden, not unmounted, so going back keeps the chat and the draft. */}
       <div className="screen" hidden={screen !== 'interview'}>
         <Interview
@@ -194,17 +227,34 @@ export default function App() {
       </div>
       {map && spec && (
         <div className="screen editor-screen" hidden={screen !== 'editor'}>
-          <p>Seed: {seed}</p>
-          <MapEditor
-            key={generation}
-            map={map}
-            kit={spec.kit}
-            onChange={handleEdit}
+          <SideRail
+            label="Map details"
+            tabs={[
+              { name: 'Chat', content: <Transcript turns={chat} /> },
+              { name: 'Spec', content: <SpecView spec={spec} /> },
+            ]}
           />
-          <button onClick={handleExport} disabled={checking}>
-            Export for Tiled
-          </button>
-          <ViolationList explanations={explanations} />
+          <section className="workspace" aria-label="Map">
+            <MapEditor
+              key={generation}
+              map={map}
+              kit={spec.kit}
+              onChange={handleEdit}
+              highlight={shown}
+            />
+            {undone && (
+              <p role="alert" className="toast">
+                <strong>Edit undone.</strong> {undone}
+              </p>
+            )}
+          </section>
+          <aside className="issues-panel">
+            <ViolationList
+              violations={violations}
+              explanations={explanations}
+              onShow={setShown}
+            />
+          </aside>
         </div>
       )}
     </main>

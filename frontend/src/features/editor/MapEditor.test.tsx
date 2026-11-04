@@ -342,3 +342,17 @@ test('a stalled sheet load is dropped after a while, so a later redraw tries aga
   await settle()
   expect(loads).toHaveLength(2)
 })
+
+test('outlines the cell it is asked to point out', () => {
+  render(
+    <MapEditor
+      map={start}
+      kit="dungeon"
+      onChange={() => {}}
+      highlight={{ x: 2, y: 1 }}
+    />,
+  )
+  const cells = screen.getAllByRole('gridcell')
+  expect(cells[1 * start.width + 2].style.boxShadow).not.toBe('')
+  expect(cells.filter((c) => c.style.boxShadow !== '')).toHaveLength(1)
+})
