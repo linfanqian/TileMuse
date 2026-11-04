@@ -14,7 +14,7 @@ flowchart LR
     check -->|breaks a hard rule| revert[Revert edit<br/>toast explains why] --> editor
     check -->|ok, or only spec-rule issues| editor
     editor -->|edit spec fields| regen[Regenerate<br/>same seed] --> editor
-    editor --> export([Export Tiled JSON])
+    editor --> export([Export for Tiled])
     editor -.->|stretch: new idea or feedback| interview
 ```
 
@@ -22,7 +22,7 @@ flowchart LR
 2. **Interview.** The agent asks about the most important missing or vague field. Each question has 2-4 suggested answers, a one-line reason in plain language, and a free-text option. The design spec panel fills in live.
 3. **Generate.** "Generate map" unlocks once every field is ready. The backend generates with a seed and validates.
 4. **Edit.** The user paints tiles and places objects. Validation runs after every edit. Changing spec fields regenerates the map with the same seed.
-5. **Export.** "Export Tiled JSON" downloads a `.tmj` file for Tiled, Phaser, or Godot.
+5. **Export.** "Export for Tiled" downloads a zip with a `.tmj` file and its tile sheet, for Tiled, Phaser, or Godot.
 
 ## Screens
 
@@ -38,7 +38,7 @@ flowchart LR
 
 ![Editor screen](ui/editor.png)
 
-- **Top bar.** The seed and Regenerate (a new seed means a new layout for the same spec), Undo, and the primary **Export Tiled JSON** action.
+- **Top bar.** The seed and Regenerate (a new seed means a new layout for the same spec), Undo, and the primary **Export for Tiled** action.
 - **Left rail.** Tabs for Chat and Spec. The Spec tab edits the same fields as the interview: size, doors, object counts, and layout rules.
 - **Center.** A tool palette (select, erase, floor, wall, door, and one tool per object kind), the map canvas, and a status bar with the hovered tile.
 - **Issues (right).** One card per violation, with the rule, the explanation from the explainer, and a suggested fix. "Show on map" highlights the tile (the red outline on the guard). Passing rules are listed below so the user knows what was checked.

@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from './App'
 import * as client from './api/client'
 import type { ValidationResult } from './api/client'
@@ -42,6 +42,16 @@ beforeEach(() => {
     violations: [],
     explanations: [],
   })
+})
+
+// Undoes the download stubs below after every test, even a failed one.
+const realUrl = {
+  createObjectURL: URL.createObjectURL,
+  revokeObjectURL: URL.revokeObjectURL,
+}
+afterEach(() => {
+  Object.assign(URL, realUrl)
+  vi.restoreAllMocks()
 })
 
 // A promise the test settles by hand, to control the order replies arrive in.
@@ -301,17 +311,50 @@ test('a failed validation does not replace a Generate error', async () => {
   expect(screen.getAllByRole('alert')).toHaveLength(1)
 })
 
-test('an export error goes away when export is tried again', async () => {
+// Stubs the browser download, which jsdom can't do. Returns the clicked links.
+function stubDownload() {
   URL.createObjectURL = vi.fn(() => 'blob:map')
-  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-  vi.mocked(client.exportTiled)
-    .mockRejectedValueOnce(new Error('export failed'))
-    .mockResolvedValueOnce({ type: 'map' })
+  URL.revokeObjectURL = vi.fn()
+  const clicked: HTMLAnchorElement[] = []
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+    this: HTMLAnchorElement,
+  ) {
+    clicked.push(this)
+  })
+  return clicked
+}
+
+test('export downloads a zip for the map and frees its URL later', async () => {
+  const clicked = stubDownload()
+  const timers = vi.spyOn(window, 'setTimeout')
+  const zip = new Blob(['zip'], { type: 'application/zip' })
+  vi.mocked(client.exportMap).mockResolvedValue(zip)
   await generateMap()
-  const exportButton = screen.getByRole('button', { name: 'Export Tiled JSON' })
+  fireEvent.click(screen.getByRole('button', { name: 'Export for Tiled' }))
+  await waitFor(() => expect(clicked).toHaveLength(1))
+  const [spec, map] = vi.mocked(client.exportMap).mock.lastCall!
+  expect(spec.kit).toBe('dungeon')
+  expect(map.width).toBe(4)
+  expect(URL.createObjectURL).toHaveBeenCalledWith(zip)
+  expect(clicked[0].download).toBe('tilemuse-map.zip')
+
+  // Freed a minute later, not right away, so slower browsers can still read the file.
+  expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+  const free = timers.mock.calls.find(([, delay]) => delay === 60_000)?.[0]
+  expect(free).toBeDefined()
+  ;(free as () => void)()
+  expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:map')
+})
+
+test('an export error goes away when export is tried again', async () => {
+  stubDownload()
+  vi.mocked(client.exportMap)
+    .mockRejectedValueOnce(new Error('export failed'))
+    .mockResolvedValueOnce(new Blob(['zip'], { type: 'application/zip' }))
+  await generateMap()
+  const exportButton = screen.getByRole('button', { name: 'Export for Tiled' })
   fireEvent.click(exportButton)
   await screen.findByRole('alert')
   fireEvent.click(exportButton)
   await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
-  vi.restoreAllMocks()
 })

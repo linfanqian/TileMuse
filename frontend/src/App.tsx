@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import {
-  exportTiled,
+  exportMap,
   generate,
   validate,
   type Explanation,
@@ -13,6 +13,8 @@ import ViolationList from './features/violations/ViolationList'
 import './App.css'
 
 type Screen = 'interview' | 'editor'
+
+const REVOKE_AFTER_MS = 60_000
 
 // Composes the features. Features never import each other; shared state lives here.
 export default function App() {
@@ -92,14 +94,17 @@ export default function App() {
   }
 
   async function handleExport() {
-    if (!map) return
+    if (!map || !spec) return
     setActionError(null)
     try {
-      const tiled = await exportTiled(map)
+      const url = URL.createObjectURL(await exportMap(spec, map))
       const a = document.createElement('a')
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(tiled, null, 2)]))
-      a.download = 'map.tmj'
+      a.href = url
+      a.download = 'tilemuse-map.zip'
       a.click()
+      // Some browsers, Safari among them, read the file after the click returns, so the URL
+      // is freed a minute later instead of right away.
+      setTimeout(() => URL.revokeObjectURL(url), REVOKE_AFTER_MS)
     } catch (e) {
       setActionError(String(e))
     }
@@ -142,7 +147,7 @@ export default function App() {
         <div className="screen editor-screen" hidden={screen !== 'editor'}>
           <p>Seed: {seed}</p>
           <MapEditor key={generation} map={map} onChange={handleEdit} />
-          <button onClick={handleExport}>Export Tiled JSON</button>
+          <button onClick={handleExport}>Export for Tiled</button>
           <ViolationList explanations={explanations} />
         </div>
       )}

@@ -85,7 +85,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Export Map */
+        /**
+         * Export Map
+         * @description A zip with the Tiled map and the tile sheet it points to, ready to open in Tiled.
+         */
         post: operations["export_map_api_export_post"];
         delete?: never;
         options?: never;
@@ -116,6 +119,7 @@ export interface components {
         };
         /** ExportRequest */
         ExportRequest: {
+            spec: components["schemas"]["MapSpec"];
             map: components["schemas"]["GameMap"];
         };
         /** GameMap */
@@ -510,15 +514,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description The map and its sheet */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/zip": unknown;
                 };
             };
             /** @description Validation Error */

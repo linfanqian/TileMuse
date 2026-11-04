@@ -1,4 +1,6 @@
+import io
 import json
+import zipfile
 
 import httpx2
 import pytest
@@ -37,9 +39,15 @@ def test_generate_then_validate_roundtrip(make_spec):
     assert res.status_code == 200
     assert res.json()["violations"] == []
 
-    res = client.post("/api/export", json={"map": generated["map"]})
+    res = client.post("/api/export", json={"spec": spec, "map": generated["map"]})
     assert res.status_code == 200
-    assert res.json()["type"] == "map"
+    assert res.headers["content-type"] == "application/zip"
+    assert 'filename="tilemuse-map.zip"' in res.headers["content-disposition"]
+    with zipfile.ZipFile(io.BytesIO(res.content)) as archive:
+        assert sorted(archive.namelist()) == ["tilemuse-map.tmj", "tilesheet.png"]
+        tiled = json.loads(archive.read("tilemuse-map.tmj"))
+    assert tiled["type"] == "map"
+    assert tiled["tilesets"][0]["image"] == "tilesheet.png"
 
 
 def test_validate_explains_each_violation(make_spec):
@@ -68,22 +76,21 @@ def test_validate_explains_each_violation(make_spec):
 
 def test_rejects_map_whose_tiles_do_not_match_its_size(make_spec):
     bad_map = {"width": 3, "height": 2, "tiles": [[0, 0, 0], [0, 0]]}
-    res = client.post("/api/export", json={"map": bad_map})
-    assert res.status_code == 422
-    res = client.post(
-        "/api/validate", json={"spec": make_spec().model_dump(mode="json"), "map": bad_map}
-    )
-    assert res.status_code == 422
+    spec = make_spec().model_dump(mode="json")
+    for route in ("/api/export", "/api/validate"):
+        res = client.post(route, json={"spec": spec, "map": bad_map})
+        assert res.status_code == 422
 
 
-def test_rejects_map_with_object_outside_it():
+def test_rejects_map_with_object_outside_it(make_spec):
     bad_map = {
         "width": 2,
         "height": 1,
         "tiles": [[0, 0]],
         "objects": [{"kind": "chest", "x": 2, "y": 0}],
     }
-    res = client.post("/api/export", json={"map": bad_map})
+    spec = make_spec().model_dump(mode="json")
+    res = client.post("/api/export", json={"spec": spec, "map": bad_map})
     assert res.status_code == 422
 
 

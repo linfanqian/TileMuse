@@ -1,45 +1,76 @@
 """Map -> Tiled JSON export (https://doc.mapeditor.org/en/stable/reference/json-map-format/).
 
-Checked by loading in Tiled 1.12.2: it reads this file without errors and re-saves it as
-format "1.10" with the same `type` fields on tiles and objects.
+The map is drawn with its kit's tiles (see drawing.py), on three layers: floor, walls, and
+objects. The tileset points to `tilesheet.png`, which must sit next to the exported file.
+
+Checked with Tiled 1.12.2 for every kit: `tmxrasterizer` draws the export as expected, and
+`tiled --export-map json` re-saves it with the same layers, tiles, and object types.
 """
 
 from typing import Any
 
-from app.models import GameMap, Tile
+from app.drawing import Layer, draw
+from app.models import GameMap
+from app.tileset import load_tileset
 
-TILE_SIZE = 32
-FIRST_GID = 1
+FIRST_GID = 1  # Tiled's gid for sheet id 0. 0 means an empty cell.
 
 
-def to_tiled(game_map: GameMap) -> dict[str, Any]:
+def to_tiled(game_map: GameMap, kit: str) -> dict[str, Any]:
+    catalog = load_tileset().catalog
+    size = catalog.tile_size
+    drawing = draw(game_map, kit)
+
+    def tile_layer(layer_id: int, name: str, layer: Layer) -> dict[str, Any]:
+        return {
+            "id": layer_id,
+            "name": name,
+            "type": "tilelayer",
+            "x": 0,
+            "y": 0,
+            "width": drawing.width,
+            "height": drawing.height,
+            "opacity": 1,
+            "visible": True,
+            "data": [0 if tile is None else FIRST_GID + tile for row in layer for tile in row],
+        }
+
+    objects = []
+    for i, obj in enumerate(drawing.objects, start=1):
+        shape: dict[str, Any] = {"x": obj.x * size, "y": obj.y * size}
+        if obj.tile is not None:
+            # A tile object's y is its bottom edge.
+            shape = {"gid": FIRST_GID + obj.tile, "x": obj.x * size, "y": (obj.y + 1) * size}
+        objects.append(
+            {
+                "id": i,
+                "name": obj.kind,
+                "type": obj.kind,
+                **shape,
+                "width": size,
+                "height": size,
+                "rotation": 0,
+                "visible": True,
+            }
+        )
+
     return {
         "type": "map",
         "version": "1.10",
         "orientation": "orthogonal",
         "renderorder": "right-down",
         "infinite": False,
-        "width": game_map.width,
-        "height": game_map.height,
-        "tilewidth": TILE_SIZE,
-        "tileheight": TILE_SIZE,
-        "nextlayerid": 3,
-        "nextobjectid": len(game_map.objects) + 1,
+        "width": drawing.width,
+        "height": drawing.height,
+        "tilewidth": size,
+        "tileheight": size,
+        "nextlayerid": 4,
+        "nextobjectid": len(objects) + 1,
         "layers": [
+            tile_layer(1, "floor", drawing.floor),
+            tile_layer(2, "walls", drawing.walls),
             {
-                "id": 1,
-                "name": "tiles",
-                "type": "tilelayer",
-                "x": 0,
-                "y": 0,
-                "width": game_map.width,
-                "height": game_map.height,
-                "opacity": 1,
-                "visible": True,
-                "data": [FIRST_GID + tile for row in game_map.tiles for tile in row],
-            },
-            {
-                "id": 2,
+                "id": 3,
                 "name": "objects",
                 "type": "objectgroup",
                 "x": 0,
@@ -47,31 +78,22 @@ def to_tiled(game_map: GameMap) -> dict[str, Any]:
                 "opacity": 1,
                 "visible": True,
                 "draworder": "topdown",
-                "objects": [
-                    {
-                        "id": i,
-                        "name": obj.kind,
-                        "type": obj.kind,
-                        "x": obj.x * TILE_SIZE,
-                        "y": obj.y * TILE_SIZE,
-                        "width": TILE_SIZE,
-                        "height": TILE_SIZE,
-                        "rotation": 0,
-                        "visible": True,
-                    }
-                    for i, obj in enumerate(game_map.objects, start=1)
-                ],
+                "objects": objects,
             },
         ],
         "tilesets": [
             {
                 "firstgid": FIRST_GID,
-                "name": "tiles",
-                "tilewidth": TILE_SIZE,
-                "tileheight": TILE_SIZE,
-                "tilecount": len(Tile),
-                "columns": len(Tile),
-                "tiles": [{"id": t.value, "type": t.name.lower()} for t in Tile],
+                "name": "tilemuse",
+                "image": catalog.image,
+                "imagewidth": catalog.columns * size,
+                "imageheight": catalog.rows * size,
+                "tilewidth": size,
+                "tileheight": size,
+                "tilecount": catalog.columns * catalog.rows,
+                "columns": catalog.columns,
+                "margin": 0,
+                "spacing": 0,
             }
         ],
     }

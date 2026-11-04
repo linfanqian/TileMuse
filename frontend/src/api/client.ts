@@ -56,7 +56,21 @@ export const generate = (spec: MapSpec, seed: number) =>
 export const validate = (spec: MapSpec, map: GameMap) =>
   post('/api/validate', { spec, map })
 
-export const exportTiled = (map: GameMap) => post('/api/export', { map })
+type ExportBody =
+  paths['/api/export']['post']['requestBody']['content']['application/json']
+
+// /api/export returns a zip (the Tiled map and its tile sheet), not JSON, so it skips post().
+export async function exportMap(spec: MapSpec, map: GameMap): Promise<Blob> {
+  const body: ExportBody = { spec, map }
+  const res = await fetch('/api/export', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok)
+    throw new Error(`/api/export failed: ${res.status} ${await res.text()}`)
+  return new Blob([await res.arrayBuffer()], { type: 'application/zip' })
+}
 
 /**
  * Runs one interview turn. Calls `onText` with each piece of Claude's message as it streams,
