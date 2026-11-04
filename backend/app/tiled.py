@@ -2,9 +2,9 @@
 
 The export has four layers. Floor, walls, and objects draw the map with its kit's tiles (see
 drawing.py). Doors marks each door that leads out with a `door` object on its cell, so a game
-can find the exits. Tiles that block movement, by the catalog, carry a
-`blocking` property, so a game can set up collision. The tileset points to `tilesheet.png`,
-which must sit next to the exported file.
+can find the exits. Tiles that block movement where the kit draws them (walls, an opening's
+ends, and blocking objects) carry a `blocking` property, so a game can set up collision. The
+tileset points to `tilesheet.png`, which must sit next to the exported file.
 
 Checked with Tiled 1.12.2 for every kit: `tmxrasterizer` draws the export as expected, and
 `tiled --export-map json` re-saves it with the same layers, tiles, and object types, and keeps
@@ -15,14 +15,15 @@ from typing import Any
 
 from app.drawing import Layer, draw
 from app.models import GameMap
-from app.tileset import Catalog, load_tileset
+from app.tileset import load_tileset
 from app.walkable import exits
 
 FIRST_GID = 1  # Tiled's gid for sheet id 0. 0 means an empty cell.
 
 
 def to_tiled(game_map: GameMap, kit: str) -> dict[str, Any]:
-    catalog = load_tileset().catalog
+    tileset = load_tileset()
+    catalog = tileset.catalog
     size = catalog.tile_size
     drawing = draw(game_map, kit)
 
@@ -115,19 +116,8 @@ def to_tiled(game_map: GameMap, kit: str) -> dict[str, Any]:
                         "id": tile,
                         "properties": [{"name": "blocking", "type": "bool", "value": True}],
                     }
-                    for tile in _blocking_tiles(catalog)
+                    for tile in tileset.blocking_tiles(kit)
                 ],
             }
         ],
     }
-
-
-def _blocking_tiles(catalog: Catalog) -> list[int]:
-    """Sheet ids that block movement. Entries share tiles: an opening's end is also a wall's
-    corner. So a tile blocks if any entry that uses it blocks. The export test checks, for each
-    kit, that the floor, door middles, and closed doors it draws don't block, and that every
-    wall it draws does. Some opening ends block only through wall entries no kit uses yet, so
-    changing those entries can change the export; that test catches it."""
-    return sorted(
-        {tile for entry in catalog.entries if entry.blocking for tile in entry.parts or [entry.id]}
-    )

@@ -33,15 +33,19 @@ def catalog(*entries: dict[str, Any]) -> dict[str, Any]:
     return {
         "image": "tilesheet.png",
         "tile_size": 16,
-        "columns": 2,
+        "columns": 4,
         "rows": 2,
         "entries": list(entries),
     }
 
 
 def tiles(**overrides: Any) -> list[dict[str, Any]]:
-    """One catalog entry per kind, named after its kind."""
-    return [entry(kind, kind=kind, **overrides) for kind in get_args(Kind)]
+    """One catalog entry per kind, named after its kind, each on its own tile. Walls and objects
+    block, since the kit below uses `object` only for kinds that block."""
+    return [
+        entry(kind, kind=kind, id=i, blocking=kind in ("wall", "object"), **overrides)
+        for i, kind in enumerate(get_args(Kind))
+    ]
 
 
 def kit(**overrides: Any) -> dict[str, Any]:
@@ -90,7 +94,7 @@ def test_catalog_rejects_duplicate_name():
         Catalog(**catalog(entry(), entry()))
 
 
-@pytest.mark.parametrize("tiles", [{"id": 4}, {"footprint": (2, 1), "parts": [0, 4]}])
+@pytest.mark.parametrize("tiles", [{"id": 8}, {"footprint": (2, 1), "parts": [0, 8]}])
 def test_catalog_rejects_id_outside_sheet(tiles):
     with pytest.raises(ValidationError, match="outside"):
         Catalog(**catalog(entry(**tiles)))
@@ -169,3 +173,39 @@ def test_tileset_rejects_multi_cell_object():
     objects = {**kit()["objects"], ObjectKind.CHEST: "wide"}
     with pytest.raises(ValidationError, match="chest tile wide must fill one cell"):
         Tileset(catalog=catalog(*tiles(), wide), kits={"dungeon": kit(objects=objects)})
+
+
+@pytest.mark.parametrize(
+    ("name", "blocking"),
+    [("object", False), ("item", True)],  # Chest and cover use "object"; key uses "item".
+)
+def test_tileset_rejects_object_tile_that_disagrees_with_the_game(name, blocking):
+    # The generator and validator decide what blocks by object kind, so the tile must agree.
+    flipped = [{**e, "blocking": blocking} if e["name"] == name else e for e in tiles()]
+    with pytest.raises(ValidationError, match=f"tile {name} must have blocking {not blocking}"):
+        Tileset(catalog=catalog(*flipped), kits={"dungeon": kit()})
+
+
+@pytest.mark.parametrize(("name", "role"), [("wall", "wall"), ("floor", "floor or door")])
+def test_tileset_rejects_catalog_flag_that_disagrees_with_the_kit(name, role):
+    flipped = [{**e, "blocking": not e["blocking"]} if e["name"] == name else e for e in tiles()]
+    with pytest.raises(ValidationError, match=f"{name} is a {role}"):
+        Tileset(catalog=catalog(*flipped), kits={"dungeon": kit()})
+
+
+def test_tileset_rejects_tile_that_both_blocks_and_is_walked_on():
+    # The opening's ends stand where walls are, but its first part is the floor's tile.
+    opening = entry("opening", kind="door", footprint=(3, 1), parts=[0, 2, 1])
+    doors = {**kit()["doors"], "bottom": "opening"}
+    with pytest.raises(ValidationError, match=r"tiles \[0\] both block and can be walked on"):
+        Tileset(catalog=catalog(*tiles(), opening), kits={"dungeon": kit(doors=doors)})
+
+
+def test_blocking_tiles_follow_how_the_kit_uses_them():
+    # Tile 1 is a wall here, though a walkable entry elsewhere shares it.
+    end = entry("end", kind="decor", id=1)
+    opening = entry("opening", kind="door", footprint=(3, 1), parts=[1, 0, 1])
+    doors = {**kit()["doors"], "left": "opening"}
+    tileset = Tileset(catalog=catalog(*tiles(), end, opening), kits={"dungeon": kit(doors=doors)})
+    # Wall (1) and object (3) block; the opening's middle (floor, 0) and the door (2) don't.
+    assert tileset.blocking_tiles("dungeon") == [1, 3]
