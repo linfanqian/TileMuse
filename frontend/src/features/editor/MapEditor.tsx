@@ -238,17 +238,20 @@ export default function MapEditor({ map, kit, onChange }: Props) {
   )
 }
 
-// Keeps the sheet once it has loaded. A load that fails or stalls isn't kept, so the next
-// redraw tries again.
-let sheet: HTMLImageElement | null = null
+// One load of the sheet, shared by every redraw, even while it is still loading. A failed
+// load is dropped, so the next redraw tries again.
+let sheet: Promise<HTMLImageElement> | null = null
 function loadSheet(): Promise<HTMLImageElement> {
-  if (sheet) return Promise.resolve(sheet)
-  return new Promise((resolve, reject) => {
+  sheet ??= new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image()
-    image.onload = () => resolve((sheet = image))
+    image.onload = () => resolve(image)
     image.onerror = () => reject(new Error('The tile sheet did not load.'))
     image.src = TILESHEET_URL
+  }).catch((error: unknown) => {
+    sheet = null
+    throw error
   })
+  return sheet
 }
 
 // The kit's tiles, drawn at the sheet's own size and scaled up without smoothing. Tells the

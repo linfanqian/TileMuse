@@ -281,3 +281,38 @@ test('if the canvas cannot paint, cells keep their colors and markers', async ()
   expect(cell(1, 1).textContent).toBe('P')
   expect(cell(1, 1).style.background).not.toBe('')
 })
+
+test('redraws share one sheet load, and a failed load is tried again', async () => {
+  // The loaded sheet is kept for the whole page, so this test needs a fresh editor module.
+  vi.resetModules()
+  const fresh = await import('../../api/client')
+  const { default: Editor } = await import('./MapEditor')
+  const loads: { onerror: (() => void) | null }[] = []
+  vi.stubGlobal(
+    'Image',
+    class {
+      onerror: (() => void) | null = null
+      set src(_: string) {
+        loads.push(this) // Never loads until the test says so.
+      }
+    },
+  )
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+    {} as CanvasRenderingContext2D,
+  )
+  vi.mocked(fresh.drawMap).mockImplementation(async (_, map) => drawingOf(map))
+  const show = (map: GameMap) => (
+    <Editor map={map} kit="dungeon" onChange={() => {}} />
+  )
+  const { rerender } = render(show(start))
+  await waitFor(() => expect(loads).toHaveLength(1))
+
+  rerender(show({ ...start, objects: [] }))
+  await waitFor(() => expect(fresh.drawMap).toHaveBeenCalledTimes(2))
+  await new Promise((r) => setTimeout(r)) // Lets the second draw reach the canvas.
+  expect(loads).toHaveLength(1)
+
+  loads[0].onerror!()
+  rerender(show(start))
+  await waitFor(() => expect(loads).toHaveLength(2))
+})
